@@ -1,0 +1,7 @@
+-define(ALLOWED_CHARS, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890").
+-define(NOTHING, "").
+-define(NOT_IMPLEMENTED, throw(not_implemented)).
+-define(WORKER(Module, Args), {Module, {Module, start_link, Args}, permanent, 2000, worker, [Module]}).
+-define(WORKER(Module), ?WORKER(Module, [])).
+-define(SUPERVISOR(Module, Args), {Module, {Module, start_link, Args}, permanent, infinity, supervisor, [Module]}).
+-define(SUPERVISOR(Module), ?SUPERVISOR(Module, [])).
