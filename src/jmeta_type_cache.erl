@@ -15,7 +15,7 @@
 
 %% --------------------------------------------------------------------
 %% External exports
--export([start_link/0, add/1, get/1]).
+-export([start_link/0, add/1, delete/1, get/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -25,13 +25,19 @@
 %% ====================================================================
 
 start_link() ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+    case R = gen_server:start_link({local, ?MODULE}, ?MODULE, [], []) of
+        {ok, _} -> lists:foreach(fun add/1, jmeta_library:types()), R;
+        _ -> R
+    end.
 
 add(Meta) ->
     case jmeta_declaration:parse_type(Meta) of
         {error, _} = E -> E;
         Type -> gen_server:cast(?MODULE, {add, Type}), ok
     end.
+
+delete(Name) ->
+    gen_server:cast(?MODULE, {delete, Name}), ok.
 
 get(Name) ->
     gen_server:call(?MODULE, {get, Name}).
@@ -80,6 +86,8 @@ handle_call(_, _, State) ->
 %% --------------------------------------------------------------------
 handle_cast({add, Type}, State) ->
     {noreply, dict:store(Type#type.name, Type, State)};
+handle_cast({delete, Name}, State) ->
+    {noreply, dict:erase(Name, State)};
 handle_cast(_, State) ->
     {noreply, State}.
 

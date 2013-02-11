@@ -14,7 +14,10 @@
 -export([start/0, stop/0]).
 
 % api
--export([is_type/1, is_frame/1]).
+-export([% setup tupes
+         add_type/1, delete_type/1, get_type/1,
+         % jmeta api
+         is_type/1, is_frame/1]).
 
 %%
 %% API Functions
@@ -25,6 +28,19 @@ start() ->
 
 stop() ->
     application:stop(?MODULE).
+
+% setup tupes
+
+add_type(Meta) ->
+    jmeta_type_cache:add(Meta).
+
+delete_type(Name) ->
+    jmeta_type_cache:delete(Name).
+
+get_type(Name) ->
+    jmeta_type_cache:get(Name).
+
+% jmeta api
 
 is_type(X) ->
     jmeta_check:type(X).
