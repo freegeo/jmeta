@@ -11,21 +11,26 @@
 %% Exported Functions
 %%
 
+-export([start/0, stop/0]).
+
+% api
 -export([is_type/1, is_frame/1]).
 
 %%
 %% API Functions
 %%
 
-is_type({TypeName, _RawData}) when is_atom(TypeName) ->
-    {ok, checked};
-is_type(_) ->
-    {error, wrong_type_check_format}.
+start() ->
+    application:start(?MODULE).
 
-is_frame({FrameName, _RawData}) when is_atom(FrameName) ->
-    {ok, checked};
-is_frame(_) ->
-    {error, wrong_frame_check_format}.
+stop() ->
+    application:stop(?MODULE).
+
+is_type(X) ->
+    jmeta_check:type(X).
+
+is_frame(X) ->
+    jmeta_check:frame(X).
 
 %%
 %% Local Functions

@@ -2,7 +2,7 @@
 %%% Author  : Said
 %%% Description :
 %%%
-%%% Created : 08.02.2013
+%%% Created : 11.02.2013
 %%% -------------------------------------------------------------------
 -module(jmeta_type_cache).
 
@@ -11,19 +11,30 @@
 %% Include files
 %% --------------------------------------------------------------------
 
+-include("jmeta.hrl").
+
 %% --------------------------------------------------------------------
 %% External exports
--export([]).
+-export([start_link/0, add/1, get/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
-
--record(state, {}).
 
 %% ====================================================================
 %% External functions
 %% ====================================================================
 
+start_link() ->
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+
+add(Meta) ->
+    case jmeta_declaration:parse_type(Meta) of
+        {error, _} = E -> E;
+        Type -> gen_server:cast(?MODULE, {add, Type}), ok
+    end.
+
+get(Name) ->
+    gen_server:call(?MODULE, {get, Name}).
 
 %% ====================================================================
 %% Server functions
@@ -38,7 +49,7 @@
 %%          {stop, Reason}
 %% --------------------------------------------------------------------
 init([]) ->
-    {ok, #state{}}.
+    {ok, dict:new()}.
 
 %% --------------------------------------------------------------------
 %% Function: handle_call/3
@@ -50,9 +61,15 @@ init([]) ->
 %%          {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_call(Request, From, State) ->
-    Reply = ok,
-    {reply, Reply, State}.
+handle_call({get, Name}, _, State) ->
+    Result =
+        case dict:find(Name, State) of
+            {ok, Value} -> Value;
+            error -> {error, type_is_not_defined}
+        end,
+    {reply, Result, State};
+handle_call(_, _, State) ->
+    {noreply, State}.
 
 %% --------------------------------------------------------------------
 %% Function: handle_cast/2
@@ -61,7 +78,9 @@ handle_call(Request, From, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_cast(Msg, State) ->
+handle_cast({add, Type}, State) ->
+    {noreply, dict:store(Type#type.name, Type, State)};
+handle_cast(_, State) ->
     {noreply, State}.
 
 %% --------------------------------------------------------------------
@@ -71,7 +90,7 @@ handle_cast(Msg, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_info(Info, State) ->
+handle_info(_, State) ->
     {noreply, State}.
 
 %% --------------------------------------------------------------------
@@ -79,7 +98,7 @@ handle_info(Info, State) ->
 %% Description: Shutdown the server
 %% Returns: any (ignored by gen_server)
 %% --------------------------------------------------------------------
-terminate(Reason, State) ->
+terminate(_, _) ->
     ok.
 
 %% --------------------------------------------------------------------
@@ -87,7 +106,7 @@ terminate(Reason, State) ->
 %% Purpose: Convert process state when code is changed
 %% Returns: {ok, NewState}
 %% --------------------------------------------------------------------
-code_change(OldVsn, State, Extra) ->
+code_change(_, State, _) ->
     {ok, State}.
 
 %% --------------------------------------------------------------------
