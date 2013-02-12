@@ -33,10 +33,12 @@ test() ->
 
 type({TypeName, RawData}) when is_atom(TypeName) ->
     Checker = jmeta_type_cache:checker(TypeName),
-    Checker(RawData).
+    Checker(RawData);
+type(_) -> {error, wrong_type_check_format}.
 
 frame({FrameName, _RawData}) when is_atom(FrameName) ->
-    {ok, checked}.
+    {ok, checked};
+frame(_) -> {error, wrong_frame_check_format}.
 
 % used by meta_caches
 
@@ -44,8 +46,8 @@ type_cache_check(#type{constraints=Constraints, mixins=Mixins, name=TypeName,
                        mode=#tmode{constraints=MConstraints, mixins=MMixins}},
                  RawData) ->
     try
-        lists:MMixins(fun(Mixin) -> true = type({Mixin, RawData}) end, Mixins),
-        lists:MConstraints(fun(Constraint) -> true = Constraint(RawData) end, Constraints)
+        true = lists:MMixins(fun(Mixin) -> true =:= type({Mixin, RawData}) end, Mixins),
+        true = lists:MConstraints(fun(Constraint) -> true =:= Constraint(RawData) end, Constraints)
     catch
         _:_ -> {error, {not_a, TypeName}}
     end.
