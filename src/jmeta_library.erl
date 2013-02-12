@@ -104,13 +104,13 @@ non_empty_list() ->
 set_keys() ->
     {type, set_keys,
      [{mixins, [list]},
-      {constraints, [fun(List) -> lists:all(fun erlang:is_bitstring/1, List) end]},
+      {constraints, [fun(List) -> lists:all(fun is_bitstring/1, List) end]},
       {default, []}]}.
 
 set_refs() ->
     {type, set_refs,
      [{mixins, [list]},
-      {constraints, [fun(List) -> lists:all(fun erlang:is_integer/1, List) end]},
+      {constraints, [fun(List) -> lists:all(fun is_integer/1, List) end]},
       {default, []}]}.
 
 % tuple
@@ -161,7 +161,7 @@ timestamp_range() ->
     {type, timestamp_range,
      [{mixins, [list]},
       {constraints, [fun([T1, T2]) ->
-                             Check = fun(T) -> {ok, checked} = jmeta:is_type({timestamp, T}) end,
+                             Check = fun(T) -> true = jmeta:is_type({timestamp, T}) end,
                              Check(T1), Check(T2),
                              T1 =< T2
                      end]},

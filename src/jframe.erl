@@ -22,7 +22,7 @@
          find/2, store/2, take/2, delete/2, update/2,
          valuesmap/2, keysort/1, extend/2,
          % base
-         keys/1, values/1,
+         keys/1, values/1, has/2,
          is_frame/1, is_new/1, is_empty/1,
          compare/3, sort/2]).
 
@@ -109,6 +109,9 @@ values(Frame) ->
     {_, Values} = lists:unzip(Frame),
     Values.
 
+has(Key, Frame) ->
+    lists:keymember(Key, 1, Frame).
+
 is_frame(Frame) when is_list(Frame) ->
     lists:all(fun({_, _}) -> true; (_) -> false end, Frame) andalso
         jtils:is_list_elements_unique(keys(Frame));
@@ -179,6 +182,8 @@ test_base() ->
     [true, false, false] = lists:map(fun is_empty/1, [F10, F11, F12]),
     [id, name] = keys(F12),
     [1, <<>>] = values(F12),
+    true = has(name, F12),
+    false = has(age, F12),
     [true, true, false, false] = lists:map(fun is_frame/1, [new(), F12, F12 ++ F12, [1, 2, 3]])
     % TODO compare/3, sort/2
     .
