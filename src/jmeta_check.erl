@@ -42,12 +42,12 @@ frame(_) -> {error, wrong_frame_check_format}.
 
 % used by meta_caches
 
-type_cache_check(#type{constraints=Constraints, mixins=Mixins, name=TypeName,
-                       mode=#tmode{constraints=MConstraints, mixins=MMixins}},
+type_cache_check(#type{guards=Guards, mixins=Mixins, name=TypeName,
+                       mode=#tmode{guards=MGuards, mixins=MMixins}},
                  RawData) ->
     try
         true = lists:MMixins(fun(Mixin) -> true =:= type({Mixin, RawData}) end, Mixins),
-        true = lists:MConstraints(fun(Constraint) -> true =:= Constraint(RawData) end, Constraints)
+        true = lists:MGuards(fun(Guard) -> true =:= Guard(RawData) end, Guards)
     catch
         _:_ -> {error, {not_a, TypeName}}
     end.
