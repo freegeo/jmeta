@@ -161,15 +161,16 @@ process_field({FieldName, #field{class=Class, guards=Guards, mode=#fmode{optiona
             {list_of, {type, TypeName}} -> true = list_of_type(TypeName, FieldData, Cache);
             {list_of, {frame, FrameName}} -> true = list_of_frame(FrameName, FieldData, Cache)
         end,
-        lists:all(fun(Guard) -> true = Guard(FieldData) end, Guards)
+        lists:all(fun(Guard) -> true = Guard(FieldData) end, Guards),
+        {Violated, Rest, Cache}
     catch
-        _:_ -> {[FieldName|Violated], Rest}
+        _:_ -> {[FieldName|Violated], Rest, Cache}
     end.
 
 extend_fields(FrameName, Frames) ->
     #frame{extend=Extend, fields=Fields} = jframe:find(FrameName, Frames),
     Base = jframe:extend(jframe:new(), [extend_fields(E, Frames) || E <- Extend]),
-    jframe:extend(Base, [Fields]).
+    jframe:extend(Base, [{Field#field.name, Field} || Field <- Fields]).
 
 % TODO tests
 test_type() ->
