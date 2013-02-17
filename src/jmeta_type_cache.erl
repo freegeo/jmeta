@@ -15,7 +15,7 @@
 
 %% --------------------------------------------------------------------
 %% External exports
--export([start_link/0, add/1, delete/1, checker/1, get/1]).
+-export([start_link/0, add/1, delete/1, get/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -33,14 +33,11 @@ start_link() ->
 add(Meta) ->
     case jmeta_declaration:parse_type(Meta) of
         {error, _} = E -> E;
-        Type -> gen_server:cast(?MODULE, {add, Type}), ok
+        Type -> gen_server:cast(?MODULE, {add, Type})
     end.
 
 delete(Name) ->
-    gen_server:cast(?MODULE, {delete, Name}), ok.
-
-checker(Name) ->
-    gen_server:call(?MODULE, {checker, Name}).
+    gen_server:cast(?MODULE, {delete, Name}).
 
 get(Name) ->
     gen_server:call(?MODULE, {get, Name}).
@@ -70,20 +67,11 @@ init([]) ->
 %%          {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_call({checker, Name}, _, State) ->
-    Result =
-        case dict:find(Name, State) of
-            {ok, {Checker, _}} -> Checker;
-            error -> {error, type_is_not_defined}
-        end,
-    {reply, Result, State};
 handle_call({get, Name}, _, State) ->
-    Result =
-        case dict:find(Name, State) of
-            {ok, {_, Type}} -> Type;
-            error -> {error, type_is_not_defined}
-        end,
-    {reply, Result, State};
+    {reply, case dict:find(Name, State) of
+                {ok, Type} -> Type;
+                error -> {error, {Name, is_not_defined}}
+            end, State};
 handle_call(_, _, State) ->
     {noreply, State}.
 
@@ -95,11 +83,7 @@ handle_call(_, _, State) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_cast({add, Type}, State) ->
-    Checker =
-        fun(RawData) ->
-                jmeta_check:type_cache_check(Type, RawData)
-        end,
-    {noreply, dict:store(Type#type.name, {Checker, Type}, State)};
+    {noreply, dict:store(Type#type.name, Type, State)};
 handle_cast({delete, Name}, State) ->
     {noreply, dict:erase(Name, State)};
 handle_cast(_, State) ->

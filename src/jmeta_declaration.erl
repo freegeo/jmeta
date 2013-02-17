@@ -48,7 +48,7 @@ parse_type({type, Name, Meta}) when is_atom(Name) ->
                             case lists:all(fun is_atom/1, Mixins) of
                                 false -> {error, mixins_must_be_atoms};
                                 true ->
-                                    case lists:all(fun(Fun) -> {arity, 1} =:= erlang:fun_info(Fun, arity) end, Guards) of
+                                    case is_list_of_unary_funs(Guards) of
                                         false -> {error, guards_must_be_unary_funs};
                                         true ->
                                             case jframe:new(Mode) of
@@ -61,12 +61,13 @@ parse_type({type, Name, Meta}) when is_atom(Name) ->
                                                     case lists:all(AllOrAny, [MixinsMode, GuardsMode]) of
                                                         false -> {error, mode_wrong_arguments};
                                                         true ->
-                                                            #type{name=Name,
-                                                                  mixins=jtils:list_distinct(Mixins),
-                                                                  guards=Guards,
-                                                                  default = Default,
-                                                                  mode=#tmode{mixins=MixinsMode,
-                                                                              guards=GuardsMode}}
+                                                            Type = #type{name=Name,
+                                                                         mixins=jtils:list_distinct(Mixins),
+                                                                         guards=Guards,
+                                                                         default = Default,
+                                                                         mode=#tmode{mixins=MixinsMode,
+                                                                                     guards=GuardsMode}},
+                                                            calc_type_require(Type)
                                                     end
                                             end
                                     end
@@ -76,14 +77,100 @@ parse_type({type, Name, Meta}) when is_atom(Name) ->
     end;
 parse_type(_) -> {error, wrong_type_format}.
 
-parse_frame({frame, _Name, _Meta}) ->
-    ok;
+parse_frame({frame, Name, Meta}) when is_atom(Name) ->
+    case jframe:new(Meta) of
+        {error, wrong_frame} -> {error, meta_wrong_frame};
+        _ ->
+            {Extend, Fields, Rest} = jframe:take([{extend, []}, {fields, []}], Meta),
+            case jframe:is_empty(Rest) of
+                false -> {error, meta_contains_wrong_keys};
+                true ->
+                    case lists:all(fun is_atom/1, Extend) of
+                        false -> {error, extend_must_be_atoms};
+                        true ->
+                            case jframe:new(Fields) of
+                                {error, wrong_frame} -> {error, fields_wrong_frame};
+                                _ ->
+                                    ParseFields =
+                                        fun({FieldName, _} = Field) ->
+                                                case parse_field(Field) of
+                                                    {error, Reason} ->
+                                                        {error, [{field, FieldName},
+                                                                 {reason, Reason}]};
+                                                    R -> R
+                                                end
+                                        end,
+                                    ParsedFields = lists:map(ParseFields, Fields),
+                                    case [Description || {error, Description} <- ParsedFields] of
+                                        [] -> calc_frame_require(#frame{name=Name, extend=Extend, fields=ParsedFields});
+                                        FieldsErrors -> {error, {incorrect_fields, FieldsErrors}}
+                                    end
+                            end
+                    end
+            end
+    end;
 parse_frame(_) -> {error, wrong_frame_format}.
 
 %%
 %% Local Functions
 %%
 
+parse_field({Name, Meta}) when is_atom(Name) ->
+    case jframe:new(Meta) of
+        {error, wrong_frame} -> {error, field_wrong_frame};
+        _ ->
+            {TypeClass, FrameClass, ListOfClass, Guards, Default, Mode, Rest} =
+                jframe:take([{type, []},
+                             {frame, []},
+                             {list_of, []},
+                             {guards, []},
+                             default,
+                             {mode, [{optional, false}]}], Meta),
+            case jframe:is_empty(Rest) of
+                false -> {error, field_contains_wrong_keys};
+                true ->
+                    case parse_class(TypeClass, FrameClass, ListOfClass) of
+                        {error, _} = E -> E;
+                        Class ->
+                            case is_list_of_unary_funs(Guards) of
+                                false -> {error, guards_must_be_unary_funs};
+                                true ->
+                                    case jframe:new(Mode) of
+                                        {error, wrong_frame} -> {error, field_mode_wrong_frame};
+                                        _ ->
+                                            Optional = jframe:find({optional, false}, Mode),
+                                            #field{name=Name,
+                                                   class=Class,
+                                                   guards=Guards,
+                                                   default=Default,
+                                                   mode=#fmode{optional=Optional}}
+                                    end
+                            end
+                    end
+            end
+    end;
+parse_field(_) -> {error, wrong_field_format}.
+
+parse_class(TypeName, [], []) when is_atom(TypeName) -> {type, TypeName};
+parse_class([], FrameName, []) when is_atom(FrameName) -> {frame, FrameName};
+parse_class([], [], {type, TypeName} = ListOf) when is_atom(TypeName) -> {list_of, ListOf};
+parse_class([], [], {frame, FrameName} = ListOf) when is_atom(FrameName) -> {list_of, ListOf};
+parse_class(_, _, _) -> {error, ambiguous_class}.
+
+calc_type_require(#type{mixins=Mixins} = T) ->
+    T#type{require=[{type, M} || M <- Mixins]}.
+
+calc_frame_require(#frame{extend=Extend, fields=Fields} = F) ->
+    Require = [case Field#field.class of
+                   {list_of, Class} -> Class;
+                   Other -> Other
+               end || Field <- Fields],
+    F#frame{require=lists:usort([{frame, Frame} || Frame <- Extend] ++ Require)}.
+
+is_list_of_unary_funs(List) ->
+    lists:all(fun(Fun) -> {arity, 1} =:= erlang:fun_info(Fun, arity) end, List).
+
+% TODO update tests
 test_type() ->
     {error, wrong_type_format} = parse_type(1),
     {error, wrong_type_format} = parse_type({1, 1, 1}),
@@ -113,4 +200,5 @@ test_type() ->
     T4 = parse_type({type, int, [{mixins, [number]}, {guards, [IsInteger]}, {default, 0}, {mode, [{guards, any}]}]}).
 
 test_frame() ->
+    % TODO parse_field and parse_frame tests
     ok.

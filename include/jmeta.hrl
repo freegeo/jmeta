@@ -1,5 +1,6 @@
--record(type, {name, mixins, guards, default, mode}).
+-record(type, {name, mixins, guards, default, mode, require}).
 -record(tmode, {mixins, guards}).
 
--record(bo, {name, fields}).
--record(field, {name, sign, class, constraints, mode}).
+-record(frame, {name, extend, fields, require}).
+-record(field, {name, class, guards, default, mode}).
+-record(fmode, {optional}).

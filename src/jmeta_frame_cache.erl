@@ -11,9 +11,11 @@
 %% Include files
 %% --------------------------------------------------------------------
 
+-include("jmeta.hrl").
+
 %% --------------------------------------------------------------------
 %% External exports
--export([start_link/0]).
+-export([start_link/0, add/1, delete/1, get/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -23,8 +25,22 @@
 %% ====================================================================
 
 start_link() ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+    case R = gen_server:start_link({local, ?MODULE}, ?MODULE, [], []) of
+        {ok, _} -> lists:foreach(fun add/1, jmeta_library:frames()), R;
+        _ -> R
+    end.
 
+add(Meta) ->
+    case jmeta_declaration:parse_frame(Meta) of
+        {error, _} = E -> E;
+        Frame -> gen_server:cast(?MODULE, {add, Frame})
+    end.
+
+delete(Name) ->
+    gen_server:cast(?MODULE, {delete, Name}).
+
+get(Name) ->
+    gen_server:call(?MODULE, {get, Name}).
 
 %% ====================================================================
 %% Server functions
@@ -51,9 +67,13 @@ init([]) ->
 %%          {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_call(Request, From, State) ->
-    Reply = ok,
-    {reply, Reply, State}.
+handle_call({get, Name}, _, State) ->
+    {reply, case dict:find(Name, State) of
+                {ok, Type} -> Type;
+                error -> {error, {Name, is_not_defined}}
+            end, State};
+handle_call(_, _, State) ->
+    {noreply, State}.
 
 %% --------------------------------------------------------------------
 %% Function: handle_cast/2
@@ -62,7 +82,11 @@ handle_call(Request, From, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_cast(Msg, State) ->
+handle_cast({add, Frame}, State) ->
+    {noreply, dict:store(Frame#frame.name, Frame, State)};
+handle_cast({delete, Name}, State) ->
+    {noreply, dict:erase(Name, State)};
+handle_cast(_, State) ->
     {noreply, State}.
 
 %% --------------------------------------------------------------------
@@ -72,7 +96,7 @@ handle_cast(Msg, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_info(Info, State) ->
+handle_info(_, State) ->
     {noreply, State}.
 
 %% --------------------------------------------------------------------
@@ -80,7 +104,7 @@ handle_info(Info, State) ->
 %% Description: Shutdown the server
 %% Returns: any (ignored by gen_server)
 %% --------------------------------------------------------------------
-terminate(Reason, State) ->
+terminate(_, _) ->
     ok.
 
 %% --------------------------------------------------------------------
@@ -88,7 +112,7 @@ terminate(Reason, State) ->
 %% Purpose: Convert process state when code is changed
 %% Returns: {ok, NewState}
 %% --------------------------------------------------------------------
-code_change(OldVsn, State, Extra) ->
+code_change(_, State, _) ->
     {ok, State}.
 
 %% --------------------------------------------------------------------

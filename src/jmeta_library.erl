@@ -22,10 +22,12 @@
 
 test() ->
     [] = [R || {error, _} = R <- [jmeta_declaration:parse_type(T) || T <- types()]],
+    [] = [R || {error, _} = R <- [jmeta_declaration:parse_frame(F) || F <- frames()]],
     {ok, done}.
 
 types() ->
-    [% numeric
+    [atom(),
+     % numeric
      numeric(),
      integer(),
      bit(),
@@ -37,6 +39,7 @@ types() ->
      non_empty_list(),
      set_keys(),
      set_refs(),
+     list_of_frames(),
      % tuple
      tuple(),
      % string and binary
@@ -58,6 +61,11 @@ frames() ->
 %%
 %% Local Functions
 %%
+
+atom() ->
+    {type, atom,
+     [{guards, [fun is_atom/1]},
+      {default, 0}]}.
 
 % numeric
 
@@ -111,6 +119,12 @@ set_refs() ->
     {type, set_refs,
      [{mixins, [list]},
       {guards, [fun(List) -> lists:all(fun is_integer/1, List) end]},
+      {default, []}]}.
+
+list_of_frames() ->
+    {type, list_of_frames,
+     [{mixins, [list]},
+      {guards, [fun(List) -> lists:all(fun jframe:is_frame/1, List) end]},
       {default, []}]}.
 
 % tuple
@@ -176,13 +190,18 @@ frame() ->
       {default, []}]}.
 
 new_frame() ->
-    {type, frame,
+    {type, new_frame,
      [{mixins, [frame]},
       {guards, [fun jframe:is_new/1]},
       {default, []}]}.
 
 empty_frame() ->
-    {type, frame,
+    {type, empty_frame,
      [{mixins, [frame]},
       {guards, [fun jframe:is_empty/1]},
       {default, []}]}.
+
+%-------------------------------------------------------------------------------------
+
+% system
+
