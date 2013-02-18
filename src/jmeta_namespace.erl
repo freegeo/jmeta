@@ -2,20 +2,20 @@
 %%% Author  : Said
 %%% Description :
 %%%
-%%% Created : 08.02.2013
+%%% Created : 18.02.2013
 %%% -------------------------------------------------------------------
--module(jmeta_frame_cache).
+-module(jmeta_namespace).
 
 -behaviour(gen_server).
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
 
--include("jmeta.hrl").
+-include("jtils.hrl").
 
 %% --------------------------------------------------------------------
 %% External exports
--export([start_link/0, add/1, delete/1, get/1]).
+-export([start_link/1, add/1, delete/1, get/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -24,23 +24,26 @@
 %% External functions
 %% ====================================================================
 
-start_link() ->
-    case R = gen_server:start_link({local, ?MODULE}, ?MODULE, [], []) of
-        {ok, _} -> lists:foreach(fun add/1, jmeta_library:frames()), R;
-        _ -> R
-    end.
+start_link(Namespace) ->
+    gen_server:start_link({local, ?NAMESPACE(Namespace)}, ?MODULE, [], []).
 
 add(Meta) ->
-    case jmeta_declaration:parse_frame(Meta) of
+    case jmeta_declaration:parse(Meta) of
         {error, _} = E -> E;
-        Frame -> gen_server:cast(?MODULE, {add, Frame})
+        Result ->
+            Namespace = jmeta_declaration:namespace(Result),
+            case exists(Namespace) of
+                false -> new(Namespace);
+                true -> dont_care
+            end,
+            cast(Namespace, {add, {jmeta_declaration:key(Result), Result}})
     end.
 
-delete(Name) ->
-    gen_server:cast(?MODULE, {delete, Name}).
+delete({Namespace, _} = Key) ->
+    cast(Namespace, {delete, Key}).
 
-get(Name) ->
-    gen_server:call(?MODULE, {get, Name}).
+get({Namespace, _} = Key) ->
+    call(Namespace, {get, Key}).
 
 %% ====================================================================
 %% Server functions
@@ -67,10 +70,10 @@ init([]) ->
 %%          {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_call({get, Name}, _, State) ->
-    {reply, case dict:find(Name, State) of
-                {ok, Type} -> Type;
-                error -> {error, {Name, is_not_defined}}
+handle_call({get, Key}, _, State) ->
+    {reply, case dict:find(Key, State) of
+                {ok, Data} -> Data;
+                error -> {error, {Key, is_not_defined}}
             end, State};
 handle_call(_, _, State) ->
     {noreply, State}.
@@ -82,10 +85,10 @@ handle_call(_, _, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_cast({add, Frame}, State) ->
-    {noreply, dict:store(Frame#frame.name, Frame, State)};
-handle_cast({delete, Name}, State) ->
-    {noreply, dict:erase(Name, State)};
+handle_cast({add, {Key, Record}}, State) ->
+    {noreply, dict:store(Key, Record, State)};
+handle_cast({delete, Key}, State) ->
+    {noreply, dict:erase(Key, State)};
 handle_cast(_, State) ->
     {noreply, State}.
 
@@ -119,3 +122,20 @@ code_change(_, State, _) ->
 %%% Internal functions
 %% --------------------------------------------------------------------
 
+new(Namespace) ->
+    supervisor:start_child(jmeta_sup, [Namespace]).
+
+exists(Namespace) ->
+    whereis(?NAMESPACE(Namespace)) =/= undefined.
+
+cast(Namespace, Request) ->
+    case exists(Namespace) of
+        true -> gen_server:cast(?NAMESPACE(Namespace), Request);
+        false -> {error, {wrong_namespace, Namespace}}
+    end.
+
+call(Namespace, Request) ->
+    case exists(Namespace) of
+        true -> gen_server:call(?NAMESPACE(Namespace), Request);
+        false -> {error, {wrong_namespace, Namespace}}
+    end.

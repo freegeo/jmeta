@@ -32,7 +32,9 @@
 %% ====================================================================
 
 start_link() ->
-    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+    Info = supervisor:start_link({local, ?MODULE}, ?MODULE, []),
+    lists:foreach(fun jmeta_namespace:add/1, jmeta_library:std()),
+    Info.
 
 %% ====================================================================
 %% Server functions
@@ -44,10 +46,8 @@ start_link() ->
 %%          {error, Reason}
 %% --------------------------------------------------------------------
 init([]) ->
-    Workers =
-        [?WORKER(jmeta_type_cache),
-         ?WORKER(jmeta_frame_cache)],
-    {ok, {{one_for_one, 1, 1}, Workers}}.
+    {ok, {{simple_one_for_one, 1, 1},
+          [?WORKER(jmeta_namespace)]}}.
 
 %% ====================================================================
 %% Internal functions

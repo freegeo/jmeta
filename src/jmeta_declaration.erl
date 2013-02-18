@@ -17,8 +17,8 @@
 -export([test/0]).
 
 % api
--export([parse_type/1,
-         parse_frame/1]).
+-export([parse/1,
+         namespace/1, name/1, key/1, kind/1]).
 
 %%
 %% API Functions
@@ -29,7 +29,8 @@ test() ->
     test_frame(),
     {ok, done}.
 
-parse_type({type, Name, Meta}) when is_atom(Name) ->
+parse({type, Name, Meta}) when is_atom(Name) -> parse({type, {std, Name}, Meta});
+parse({type, {Namespace, Name} = Key, Meta}) when is_atom(Namespace) andalso is_atom(Name) ->
     case jframe:new(Meta) of
         {error, wrong_frame} -> {error, meta_wrong_frame};
         _ ->
@@ -45,11 +46,11 @@ parse_type({type, Name, Meta}) when is_atom(Name) ->
                     case Mixins =:= [] andalso Guards =:= [] of
                         true -> {error, meta_is_empty};
                         false ->
-                            case lists:all(fun is_atom/1, Mixins) of
-                                false -> {error, mixins_must_be_atoms};
+                            case is_list_of_class_keys(Mixins) of
+                                false -> {error, mixins_should_be_class_keys};
                                 true ->
                                     case is_list_of_unary_funs(Guards) of
-                                        false -> {error, guards_must_be_unary_funs};
+                                        false -> {error, guards_should_be_unary_funs};
                                         true ->
                                             case jframe:new(Mode) of
                                                 {error, wrong_frame} -> {error, mode_wrong_frame};
@@ -61,8 +62,9 @@ parse_type({type, Name, Meta}) when is_atom(Name) ->
                                                     case lists:all(AllOrAny, [MixinsMode, GuardsMode]) of
                                                         false -> {error, mode_wrong_arguments};
                                                         true ->
-                                                            Type = #type{name=Name,
-                                                                         mixins=jtils:list_distinct(Mixins),
+                                                            StdMixins = [to_class_key(M) || M <- Mixins],
+                                                            Type = #type{name=Key,
+                                                                         mixins=jtils:ulist(StdMixins),
                                                                          guards=Guards,
                                                                          default = Default,
                                                                          mode=#tmode{mixins=MixinsMode,
@@ -75,9 +77,8 @@ parse_type({type, Name, Meta}) when is_atom(Name) ->
                     end
             end
     end;
-parse_type(_) -> {error, wrong_type_format}.
-
-parse_frame({frame, Name, Meta}) when is_atom(Name) ->
+parse({frame, Name, Meta}) when is_atom(Name) -> parse({frame, {std, Name}, Meta});
+parse({frame, {Namespace, Name} = Key, Meta}) when is_atom(Namespace) andalso is_atom(Name) ->
     case jframe:new(Meta) of
         {error, wrong_frame} -> {error, meta_wrong_frame};
         _ ->
@@ -85,8 +86,8 @@ parse_frame({frame, Name, Meta}) when is_atom(Name) ->
             case jframe:is_empty(Rest) of
                 false -> {error, meta_contains_wrong_keys};
                 true ->
-                    case lists:all(fun is_atom/1, Extend) of
-                        false -> {error, extend_must_be_atoms};
+                    case is_list_of_class_keys(Extend) of
+                        false -> {error, extend_should_be_class_keys};
                         true ->
                             case jframe:new(Fields) of
                                 {error, wrong_frame} -> {error, fields_wrong_frame};
@@ -102,14 +103,34 @@ parse_frame({frame, Name, Meta}) when is_atom(Name) ->
                                         end,
                                     ParsedFields = lists:map(ParseFields, Fields),
                                     case [Description || {error, Description} <- ParsedFields] of
-                                        [] -> calc_frame_require(#frame{name=Name, extend=Extend, fields=ParsedFields});
+                                        [] ->
+                                            StdExtend = [to_class_key(E) || E <- Extend],
+                                            calc_frame_require(#frame{name=Key,
+                                                                      extend=jtils:ulist(StdExtend),
+                                                                      fields=ParsedFields});
                                         FieldsErrors -> {error, {incorrect_fields, FieldsErrors}}
                                     end
                             end
                     end
             end
     end;
-parse_frame(_) -> {error, wrong_frame_format}.
+parse(_) -> {error, wrong_meta_format}.
+
+namespace(#type{name={Namespace, _}}) -> Namespace;
+namespace(#frame{name={Namespace, _}}) -> Namespace;
+namespace(_) -> {error, unknown_record}. 
+
+name(#type{name={_, Name}}) -> Name;
+name(#frame{name={_, Name}}) -> Name;
+name(_) -> {error, unknown_record}.
+
+key(#type{name=Key}) -> Key;
+key(#frame{name=Key}) -> Key;
+key(_) -> {error, unknown_record}.
+
+kind(#type{}) -> type;
+kind(#frame{}) -> frame;
+kind(_) -> {error, unknown_record}.
 
 %%
 %% Local Functions
@@ -119,9 +140,8 @@ parse_field({Name, Meta}) when is_atom(Name) ->
     case jframe:new(Meta) of
         {error, wrong_frame} -> {error, field_wrong_frame};
         _ ->
-            {TypeClass, FrameClass, ListOfClass, Guards, Default, Mode, Rest} =
-                jframe:take([{type, []},
-                             {frame, []},
+            {Is, ListOf, Guards, Default, Mode, Rest} =
+                jframe:take([{is, []},
                              {list_of, []},
                              {guards, []},
                              default,
@@ -129,11 +149,11 @@ parse_field({Name, Meta}) when is_atom(Name) ->
             case jframe:is_empty(Rest) of
                 false -> {error, field_contains_wrong_keys};
                 true ->
-                    case parse_class(TypeClass, FrameClass, ListOfClass) of
+                    case parse_class(Is, ListOf) of
                         {error, _} = E -> E;
                         Class ->
                             case is_list_of_unary_funs(Guards) of
-                                false -> {error, guards_must_be_unary_funs};
+                                false -> {error, guards_should_be_unary_funs};
                                 true ->
                                     case jframe:new(Mode) of
                                         {error, wrong_frame} -> {error, field_mode_wrong_frame};
@@ -151,54 +171,64 @@ parse_field({Name, Meta}) when is_atom(Name) ->
     end;
 parse_field(_) -> {error, wrong_field_format}.
 
-parse_class(TypeName, [], []) when is_atom(TypeName) -> {type, TypeName};
-parse_class([], FrameName, []) when is_atom(FrameName) -> {frame, FrameName};
-parse_class([], [], {type, TypeName} = ListOf) when is_atom(TypeName) -> {list_of, ListOf};
-parse_class([], [], {frame, FrameName} = ListOf) when is_atom(FrameName) -> {list_of, ListOf};
-parse_class(_, _, _) -> {error, ambiguous_class}.
+parse_class(Is, []) when is_atom(Is) -> parse_class({std, Is}, []);
+parse_class({Namespace, Name} = Is, []) when is_atom(Namespace) andalso is_atom(Name) -> {is, Is};
+parse_class([], ListOf) when is_atom(ListOf) -> parse_class([], {std, ListOf});
+parse_class([], {Namespace, Name} = ListOf) when is_atom(Namespace) andalso is_atom(Name) -> {list_of, ListOf};
+parse_class(_, _) -> {error, ambiguous_class}.
 
 calc_type_require(#type{mixins=Mixins} = T) ->
-    T#type{require=[{type, M} || M <- Mixins]}.
+    T#type{require=Mixins}.
 
 calc_frame_require(#frame{extend=Extend, fields=Fields} = F) ->
     Require = [case Field#field.class of
                    {list_of, Class} -> Class;
-                   Other -> Other
+                   {is, Class} -> Class
                end || Field <- Fields],
-    F#frame{require=lists:usort([{frame, Frame} || Frame <- Extend] ++ Require)}.
+    F#frame{require=lists:usort(Extend ++ Require)}.
+
+is_class_key({Namespace, Name}) when is_atom(Namespace) andalso is_atom(Name) -> true;
+is_class_key(Name) when is_atom(Name) -> true;
+is_class_key(_) -> false.
+
+is_list_of_class_keys(List) ->
+    lists:all(fun is_class_key/1, List).
 
 is_list_of_unary_funs(List) ->
     lists:all(fun(Fun) -> {arity, 1} =:= erlang:fun_info(Fun, arity) end, List).
 
+to_class_key({_, _} = X) -> X;
+to_class_key(Name) -> {std, Name}.
+
 % TODO update tests
 test_type() ->
-    {error, wrong_type_format} = parse_type(1),
-    {error, wrong_type_format} = parse_type({1, 1, 1}),
-    {error, wrong_type_format} = parse_type({type, 1, 1}),
-    {error, meta_wrong_frame} = parse_type({type, int, 1}),
-    {error, meta_contains_wrong_keys} = parse_type({type, int, [{a, 1}, {b, 2}, {c, 3}]}),
-    {error, meta_is_empty} = parse_type({type, int, []}),
-    {error, meta_is_empty} = parse_type({type, int, [{mixins, []}]}),
-    {error, meta_is_empty} = parse_type({type, int, [{guards, []}]}),
-    {error, meta_is_empty} = parse_type({type, int, [{mixins, []}, {guards, []}]}),
-    {error, mixins_must_be_atoms} = parse_type({type, int, [{mixins, [1, 2, 3]}]}),
-    {error, guards_must_be_unary_funs} = parse_type({type, int, [{guards, [fun(1, 1) -> true end]}]}),
-    {error, mode_wrong_arguments} = parse_type({type, int, [{guards, [fun is_integer/1]}, {mode, [{mixins, abc}]}]}),
-    {error, mode_wrong_arguments} = parse_type({type, int, [{guards, [fun is_integer/1]}, {mode, [{guards, abc}]}]}),
+    {error, wrong_type_format} = parse(1),
+    {error, wrong_type_format} = parse({1, 1, 1}),
+    {error, wrong_type_format} = parse({type, 1, 1}),
+    {error, meta_wrong_frame} = parse({type, int, 1}),
+    {error, meta_contains_wrong_keys} = parse({type, int, [{a, 1}, {b, 2}, {c, 3}]}),
+    {error, meta_is_empty} = parse({type, int, []}),
+    {error, meta_is_empty} = parse({type, int, [{mixins, []}]}),
+    {error, meta_is_empty} = parse({type, int, [{guards, []}]}),
+    {error, meta_is_empty} = parse({type, int, [{mixins, []}, {guards, []}]}),
+    {error, mixins_should_be_class_keys} = parse({type, int, [{mixins, [1, 2, 3]}]}),
+    {error, guards_should_be_unary_funs} = parse({type, int, [{guards, [fun(1, 1) -> true end]}]}),
+    {error, mode_wrong_arguments} = parse({type, int, [{guards, [fun is_integer/1]}, {mode, [{mixins, abc}]}]}),
+    {error, mode_wrong_arguments} = parse({type, int, [{guards, [fun is_integer/1]}, {mode, [{guards, abc}]}]}),
     T1 = #type{name=int,
                mixins=[number],
                guards=[],
                default=undefined,
                mode=#tmode{guards=all,
-                           mixins=all}} = parse_type({type, int, [{mixins, [number, number]}]}),
+                           mixins=all}} = parse({type, int, [{mixins, [number, number]}]}),
     T2 = T1#type{default=0},
-    T2 = parse_type({type, int, [{mixins, [number]}, {default, 0}]}),
+    T2 = parse({type, int, [{mixins, [number]}, {default, 0}]}),
     T3 = T2#type{mode=T2#type.mode#tmode{guards=any}},
-    T3 = parse_type({type, int, [{mixins, [number]}, {default, 0}, {mode, [{guards, any}]}]}),
+    T3 = parse({type, int, [{mixins, [number]}, {default, 0}, {mode, [{guards, any}]}]}),
     IsInteger = fun is_integer/1,
     T4 = T3#type{guards=[IsInteger]},
-    T4 = parse_type({type, int, [{mixins, [number]}, {guards, [IsInteger]}, {default, 0}, {mode, [{guards, any}]}]}).
+    T4 = parse({type, int, [{mixins, [number]}, {guards, [IsInteger]}, {default, 0}, {mode, [{guards, any}]}]}).
 
 test_frame() ->
-    % TODO parse_field and parse_frame tests
+    % TODO parse_field and parse (frame) tests
     ok.

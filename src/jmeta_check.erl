@@ -17,61 +17,42 @@
 -export([test/0]).
 
 % api
--export([is_type/1, is_frame/1, list_of_type/1, list_of_frame/1, is/1, list_of/1]).
+-export([is/1, list_of/1]).
 
 %%
 %% API Functions
 %%
 
 test() ->
-    test_type(),
-    test_frame(),
+    test_is(),
     test_list_of(),
     {ok, done}.
 
 % api
 
-is_type({TypeName, RawData}) when is_atom(TypeName) ->
-    case prepare_cache({type, TypeName}) of
+is({{_, _} = Key, RawData}) ->
+    case prepare_cache(Key) of
         {error, _} = E -> E;
-        Cache -> is_type(TypeName, RawData, Cache)
+        {Types, _} = Cache ->
+            case proplists:is_defined(Key, Types) of
+                true -> is_type(Key, RawData, Cache);
+                false -> is_frame(Key, RawData, Cache)
+            end
     end;
-is_type(_) -> {error, wrong_type_check_format}.
+is({Name, RawData}) when is_atom(Name) -> is({{std, Name}, RawData});
+is(_) -> {error, wrong_check_format}.
 
-is_frame({FrameName, RawData}) when is_atom(FrameName) ->
-    case prepare_cache({frame, FrameName}) of
+list_of({{_, _} = Key, RawData}) ->
+    case prepare_cache(Key) of
         {error, _} = E -> E;
-        Cache -> is_frame(FrameName, RawData, Cache)
+        {Types, _} = Cache ->
+            case proplists:is_defined(Key, Types) of
+                true -> is_type(Key, RawData, Cache);
+                false -> is_frame(Key, RawData, Cache)
+            end
     end;
-is_frame(_) -> {error, wrong_frame_check_format}.
-
-list_of_type({TypeName, ListOfRawData}) when is_atom(TypeName) ->
-    case prepare_cache({type, TypeName}) of
-        {error, _} = E -> E;
-        Cache -> list_of_type(TypeName, ListOfRawData, Cache)
-    end;
-list_of_type(_) -> {error, wrong_list_of_type_check_format}.
-
-list_of_frame({FrameName, ListOfRawData}) when is_atom(FrameName) ->
-    case prepare_cache({frame, FrameName}) of
-        {error, _} = E -> E;
-        Cache -> list_of_frame(FrameName, ListOfRawData, Cache)
-    end;
-list_of_frame(_) -> {error, wrong_list_of_frame_check_format}.
-
-% simple api
-
-is({_, RawData} = X) ->
-    case jframe:is_frame(RawData) of
-        true -> is_frame(X);
-        false -> is_type(X)
-    end.
-
-list_of({_, RawData} = X) ->
-    case is_type({list_of_frames, RawData}) of
-        true -> list_of_frame(X);
-        _ -> list_of_type(X)
-    end.
+list_of({Name, RawData}) when is_atom(Name) -> list_of({{std, Name}, RawData});
+list_of(_) -> {error, wrong_list_check_format}.
 
 %%
 %% Local Functions
@@ -80,23 +61,21 @@ list_of({_, RawData} = X) ->
 prepare_cache(X) ->
     prepare_cache([X], {[], []}).
 
-prepare_cache([], Result) -> Result;
-prepare_cache([{type, TypeName}|Rest], {Types, Frames}) ->
-    case jframe:has(TypeName, Types) of
+prepare_cache([], {Types, Frames}) ->
+    {Types,
+     [{Key, F#frame{fields=[update_method(Field, Types) || Field <- F#frame.fields]}}
+     || {Key, F} <- Frames]};
+prepare_cache([Key|Rest], {Types, Frames}) ->
+    case proplists:is_defined(Key, Types) orelse proplists:is_defined(Key, Frames) of
         true -> prepare_cache(Rest, {Types, Frames});
         false ->
-            case jmeta_type_cache:get(TypeName) of
+            case jmeta_namespace:get(Key) of
                 {error, _} = E -> E;
-                Type -> prepare_cache(Rest ++ Type#type.require, {[{TypeName, Type}|Types], Frames})
-            end
-    end;
-prepare_cache([{frame, FrameName}|Rest], {Types, Frames}) ->
-    case jframe:has(FrameName, Frames) of
-        true -> prepare_cache(Rest, {Types, Frames});
-        false ->
-            case jmeta_frame_cache:get(FrameName) of
-                {error, _} = E -> E;
-                Frame -> prepare_cache(Rest ++ Frame#frame.require, {Types, [{FrameName, Frame}|Frames]})
+                Data ->
+                    case jmeta_declaration:kind(Data) of
+                        type -> prepare_cache(Rest ++ Data#type.require, {[{Key, Data}|Types], Frames});
+                        frame -> prepare_cache(Rest ++ Data#frame.require, {Types, [{Key, Data}|Frames]})
+                    end
             end
     end.
 
@@ -121,21 +100,21 @@ list_of_type(TypeName, ListOfRawData, Cache) ->
 list_of_frame(FrameName, ListOfRawData, Cache) ->
     std_list_of(fun(RawData) -> is_frame(FrameName, RawData, Cache) end, ListOfRawData).
 
-is_type(TypeName, RawData, {Types, _} = Cache) ->
+is_type(TypeKey, RawData, {Types, _} = Cache) ->
     try
         #type{mode=#tmode{guards=MGuards, mixins=MMixins},
-              guards=Guards, mixins=Mixins} = jframe:find(TypeName, Types),
+              guards=Guards, mixins=Mixins} = proplists:get_value(TypeKey, Types),
         true = lists:MMixins(fun(Mixin) -> true =:= is_type(Mixin, RawData, Cache) end, Mixins),
         true = lists:MGuards(fun(Guard) -> true =:= Guard(RawData) end, Guards)
     catch
-        _:_ -> {error, {not_a, TypeName}}
+        _:_ -> {error, {not_a, TypeKey}}
     end.
 
-is_frame(FrameName, RawData, {_, Frames} = Cache) ->
+is_frame(FrameKey, RawData, {_, Frames} = Cache) ->
     case true =:= jframe:is_frame(RawData) of
         false -> {error, not_a_frame};
         true ->
-            Fields = extend_fields(FrameName, Frames),
+            Fields = extend_fields(FrameKey, Frames), % TODO optimize
             {Violated, Rest, _} = lists:foldl(fun process_field/2, {[], RawData, Cache}, Fields),
             case Violated of
                 [] ->
@@ -143,23 +122,18 @@ is_frame(FrameName, RawData, {_, Frames} = Cache) ->
                         [] -> true;
                         _ -> {error, {extra_keys, jframe:keys(Rest)}}
                     end;
-                _ -> {error, [{not_a, FrameName}, {violated, Violated}]}
+                _ -> {error, [{not_a, FrameKey}, {violated, Violated}]}
             end
     end.
 
-process_field({FieldName, #field{class=Class, guards=Guards, mode=#fmode{optional=Optional}}},
+process_field({FieldName, #field{method=Method, guards=Guards, mode=#fmode{optional=Optional}}},
               {Violated, Frame, Cache}) ->
     {FieldData, Rest} = jframe:take(FieldName, Frame),
     try
         case jframe:has(FieldName, Frame) of
             false -> Optional = true;
             true ->
-                case Class of
-                    {type, TypeName} -> true = is_type(TypeName, FieldData, Cache);
-                    {frame, FrameName} -> true = is_frame(FrameName, FieldData, Cache);
-                    {list_of, {type, TypeName}} -> true = list_of_type(TypeName, FieldData, Cache);
-                    {list_of, {frame, FrameName}} -> true = list_of_frame(FrameName, FieldData, Cache)
-                end,
+                true = Method(FieldData, Cache),
                 lists:all(fun(Guard) -> true = Guard(FieldData) end, Guards)
         end,
         {Violated, Rest, Cache}
@@ -167,16 +141,30 @@ process_field({FieldName, #field{class=Class, guards=Guards, mode=#fmode{optiona
         _:_ -> {[FieldName|Violated], Rest, Cache}
     end.
 
-extend_fields(FrameName, Frames) ->
-    #frame{extend=Extend, fields=Fields} = jframe:find(FrameName, Frames),
+extend_fields(FrameKey, Frames) ->
+    #frame{extend=Extend, fields=Fields} = proplists:get_value(FrameKey, Frames),
     Base = jframe:extend(jframe:new(), [extend_fields(E, Frames) || E <- Extend]),
     jframe:extend(Base, [{Field#field.name, Field} || Field <- Fields]).
 
-% TODO tests
-test_type() ->
-    ok.
+update_method(#field{class=Class} = Field, Types) ->
+    Wrap = fun(Key, Fun) -> fun(Data, Cache) -> Fun(Key, Data, Cache) end end,
+    Method =
+        case Class of
+            {is, Key} ->
+                case proplists:is_defined(Key, Types) of
+                    true -> Wrap(Key, fun is_type/3);
+                    false -> Wrap(Key, fun is_frame/3)
+                end;
+            {list_of, Key} ->
+                case proplists:is_defined(Key, Types) of
+                    true -> Wrap(Key, fun list_of_type/3);
+                    false -> Wrap(Key, fun list_of_frame/3)
+                end
+        end,
+    Field#field{method=Method}.
 
-test_frame() ->
+% TODO tests
+test_is() ->
     ok.
 
 test_list_of() ->

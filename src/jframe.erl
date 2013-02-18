@@ -113,7 +113,7 @@ has(Key, Frame) ->
     lists:keymember(Key, 1, Frame).
 
 is_frame(Frame) when is_list(Frame) ->
-    lists:all(fun({_, _}) -> true; (_) -> false end, Frame) andalso
+    lists:all(fun({Key, _}) when is_atom(Key) -> true; (_) -> false end, Frame) andalso
         jtils:is_list_elements_unique(keys(Frame));
 is_frame(_) -> false.
 

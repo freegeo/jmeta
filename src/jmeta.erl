@@ -14,14 +14,9 @@
 -export([start/0, stop/0]).
 
 % api
--export([% setup tupes
-         add_type/1, delete_type/1, get_type/1,
-         % setup frames
-         add_frame/1, delete_frame/1, get_frame/1,
-         % jmeta api
-         is_type/1, is_frame/1,
-         list_of_type/1, list_of_frame/1,
-         % jmeta simple api (use in on your own risk)
+-export([% setup
+         add/1, delete/1, get/1,
+         % meta api
          is/1, list_of/1]).
 
 %%
@@ -34,41 +29,18 @@ start() ->
 stop() ->
     application:stop(?MODULE).
 
-% setup tupes
+% setup
 
-add_type(Meta) ->
-    jmeta_type_cache:add(Meta).
+add(Meta) ->
+    jmeta_namespace:add(Meta).
 
-delete_type(Name) ->
-    jmeta_type_cache:delete(Name).
+delete(Name) ->
+    jmeta_namespace:delete(Name).
 
-get_type(Name) ->
-    jmeta_type_cache:get(Name).
+get(Name) ->
+    jmeta_namespace:get(Name).
 
-add_frame(Meta) ->
-    jmeta_frame_cache:add(Meta).
-
-delete_frame(Name) ->
-    jmeta_frame_cache:delete(Name).
-
-get_frame(Name) ->
-    jmeta_frame_cache:get(Name).
-
-% jmeta api
-
-is_type(X) ->
-    jmeta_check:is_type(X).
-
-is_frame(X) ->
-    jmeta_check:is_frame(X).
-
-list_of_type(X) ->
-    jmeta_check:list_of_type(X).
-
-list_of_frame(X) ->
-    jmeta_check:list_of_frame(X).
-
-% jmeta simple api
+% meta api
 
 is(X) ->
     jmeta_check:is(X).

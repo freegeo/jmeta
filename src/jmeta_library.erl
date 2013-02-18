@@ -14,19 +14,19 @@
 % test
 -export([test/0]).
 
--export([types/0, frames/0]).
+-export([std/0]).
 
 %%
 %% API Functions
 %%
 
 test() ->
-    [] = [R || {error, _} = R <- [jmeta_declaration:parse_type(T) || T <- types()]],
-    [] = [R || {error, _} = R <- [jmeta_declaration:parse_frame(F) || F <- frames()]],
+    [] = [R || {error, _} = R <- [jmeta_declaration:parse(T) || T <- std()]],
     {ok, done}.
 
-types() ->
-    [atom(),
+std() ->
+    [%----------------------TYPES---------------------
+     atom(),
      % numeric
      numeric(),
      integer(),
@@ -53,14 +53,15 @@ types() ->
      % frame
      frame(),
      new_frame(),
-     empty_frame()].
-
-frames() ->
-    [fbase()].
+     empty_frame(),
+     %---------------------FRAMES---------------------
+     base()].
 
 %%
 %% Local Functions
 %%
+
+%----------------------TYPES---------------------
 
 atom() ->
     {type, atom,
@@ -201,13 +202,11 @@ empty_frame() ->
       {guards, [fun jframe:is_empty/1]},
       {default, []}]}.
 
-%-------------------------------------------------------------------------------------
+%---------------------FRAMES---------------------
 
-% system
-
-fbase() ->
+base() ->
     {frame, base,
       [{fields,
-        [{id, [{type, integer}]}
+        [{id, [{is, integer}]}
         ]}
       ]}.

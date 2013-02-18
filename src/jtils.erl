@@ -19,7 +19,7 @@
 
 % api
 -export([% list
-         list_distinct/1,
+         ulist/1,
          is_list_elements_unique/1,
          % misc
          random_string/2,
@@ -37,8 +37,8 @@ test() ->
 
 % list
 
-list_distinct([]) -> [];
-list_distinct([H|T]) -> [H|list_distinct([X || X <- T, X =/= H])].
+ulist([]) -> [];
+ulist([H|T]) -> [H|ulist([X || X <- T, X =/= H])].
 
 is_list_elements_unique(List) ->
     length(List) =:= length(lists:usort(List)).
@@ -70,7 +70,7 @@ test_list() ->
     C = [3, 2, 1],
     D = [3, 2, 1, 1, 2, 3],
     E = [[1, 2], [2, 1]],
-    [A, B, C, C, E] = lists:map(fun list_distinct/1, [A, B, C, D, E]),
+    [A, B, C, C, E] = lists:map(fun ulist/1, [A, B, C, D, E]),
     [true, true, true, false, true] = lists:map(fun is_list_elements_unique/1, [A, B, C, D, E]).
 
 test_misc() ->

@@ -2,5 +2,5 @@
 -record(tmode, {mixins, guards}).
 
 -record(frame, {name, extend, fields, require}).
--record(field, {name, class, guards, default, mode}).
+-record(field, {name, class, method, guards, default, mode}).
 -record(fmode, {optional}).
