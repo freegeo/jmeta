@@ -151,17 +151,17 @@ process_field({FieldName, #field{class=Class, guards=Guards, mode=#fmode{optiona
               {Violated, Frame, Cache}) ->
     {FieldData, Rest} = jframe:take(FieldName, Frame),
     try
-        case Optional of
-            false -> true = jframe:has(FieldName, Frame);
-            _ -> dont_care
+        case jframe:has(FieldName, Frame) of
+            false -> Optional = true;
+            true ->
+                case Class of
+                    {type, TypeName} -> true = is_type(TypeName, FieldData, Cache);
+                    {frame, FrameName} -> true = is_frame(FrameName, FieldData, Cache);
+                    {list_of, {type, TypeName}} -> true = list_of_type(TypeName, FieldData, Cache);
+                    {list_of, {frame, FrameName}} -> true = list_of_frame(FrameName, FieldData, Cache)
+                end,
+                lists:all(fun(Guard) -> true = Guard(FieldData) end, Guards)
         end,
-        case Class of
-            {type, TypeName} -> true = is_type(TypeName, FieldData, Cache);
-            {frame, FrameName} -> true = is_frame(FrameName, FieldData, Cache);
-            {list_of, {type, TypeName}} -> true = list_of_type(TypeName, FieldData, Cache);
-            {list_of, {frame, FrameName}} -> true = list_of_frame(FrameName, FieldData, Cache)
-        end,
-        lists:all(fun(Guard) -> true = Guard(FieldData) end, Guards),
         {Violated, Rest, Cache}
     catch
         _:_ -> {[FieldName|Violated], Rest, Cache}

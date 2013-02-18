@@ -56,7 +56,7 @@ types() ->
      empty_frame()].
 
 frames() ->
-    [].
+    [fbase()].
 
 %%
 %% Local Functions
@@ -205,3 +205,9 @@ empty_frame() ->
 
 % system
 
+fbase() ->
+    {frame, base,
+      [{fields,
+        [{id, [{type, integer}]}
+        ]}
+      ]}.
