@@ -32,7 +32,7 @@ test() ->
 parse({type, Name, Meta}) when is_atom(Name) -> parse({type, {std, Name}, Meta});
 parse({type, {Namespace, Name} = Key, Meta}) when is_atom(Namespace) andalso is_atom(Name) ->
     case jframe:new(Meta) of
-        {error, wrong_frame} -> {error, meta_wrong_frame};
+        {error, wrong_frame} -> {error, wrong_meta_frame};
         _ ->
             {Mixins, Guards, Default, Mode, Rest} =
                 jframe:take([{mixins, []},
@@ -63,13 +63,12 @@ parse({type, {Namespace, Name} = Key, Meta}) when is_atom(Namespace) andalso is_
                                                         false -> {error, mode_wrong_arguments};
                                                         true ->
                                                             StdMixins = [to_class_key(M) || M <- Mixins],
-                                                            Type = #type{name=Key,
-                                                                         mixins=jtils:ulist(StdMixins),
-                                                                         guards=Guards,
-                                                                         default = Default,
-                                                                         mode=#tmode{mixins=MixinsMode,
-                                                                                     guards=GuardsMode}},
-                                                            calc_type_require(Type)
+                                                            #type{name=Key,
+                                                                  mixins=jtils:ulist(StdMixins),
+                                                                  guards=Guards,
+                                                                  default = Default,
+                                                                  mode=#tmode{mixins=MixinsMode,
+                                                                              guards=GuardsMode}}
                                                     end
                                             end
                                     end
@@ -80,7 +79,7 @@ parse({type, {Namespace, Name} = Key, Meta}) when is_atom(Namespace) andalso is_
 parse({frame, Name, Meta}) when is_atom(Name) -> parse({frame, {std, Name}, Meta});
 parse({frame, {Namespace, Name} = Key, Meta}) when is_atom(Namespace) andalso is_atom(Name) ->
     case jframe:new(Meta) of
-        {error, wrong_frame} -> {error, meta_wrong_frame};
+        {error, wrong_frame} -> {error, wrong_meta_frame};
         _ ->
             {Extend, Fields, Rest} = jframe:take([{extend, []}, {fields, []}], Meta),
             case jframe:is_empty(Rest) of
@@ -105,9 +104,9 @@ parse({frame, {Namespace, Name} = Key, Meta}) when is_atom(Namespace) andalso is
                                     case [Description || {error, Description} <- ParsedFields] of
                                         [] ->
                                             StdExtend = [to_class_key(E) || E <- Extend],
-                                            calc_frame_require(#frame{name=Key,
-                                                                      extend=jtils:ulist(StdExtend),
-                                                                      fields=ParsedFields});
+                                            #frame{name=Key,
+                                                   extend=jtils:ulist(StdExtend),
+                                                   fields=ParsedFields};
                                         FieldsErrors -> {error, {incorrect_fields, FieldsErrors}}
                                     end
                             end
@@ -140,12 +139,12 @@ parse_field({Name, Meta}) when is_atom(Name) ->
     case jframe:new(Meta) of
         {error, wrong_frame} -> {error, field_wrong_frame};
         _ ->
-            {Is, ListOf, Guards, Default, Mode, Rest} =
+            {Is, ListOf, Guards, Default, Optional, Rest} =
                 jframe:take([{is, []},
                              {list_of, []},
                              {guards, []},
                              default,
-                             {mode, [{optional, false}]}], Meta),
+                             {optional, false}], Meta),
             case jframe:is_empty(Rest) of
                 false -> {error, field_contains_wrong_keys};
                 true ->
@@ -155,16 +154,11 @@ parse_field({Name, Meta}) when is_atom(Name) ->
                             case is_list_of_unary_funs(Guards) of
                                 false -> {error, guards_should_be_unary_funs};
                                 true ->
-                                    case jframe:new(Mode) of
-                                        {error, wrong_frame} -> {error, field_mode_wrong_frame};
-                                        _ ->
-                                            Optional = jframe:find({optional, false}, Mode),
-                                            #field{name=Name,
-                                                   class=Class,
-                                                   guards=Guards,
-                                                   default=Default,
-                                                   mode=#fmode{optional=Optional}}
-                                    end
+                                    #field{name=Name,
+                                           class=Class,
+                                           guards=Guards,
+                                           default=Default,
+                                           optional=Optional}
                             end
                     end
             end
@@ -176,16 +170,6 @@ parse_class({Namespace, Name} = Is, []) when is_atom(Namespace) andalso is_atom(
 parse_class([], ListOf) when is_atom(ListOf) -> parse_class([], {std, ListOf});
 parse_class([], {Namespace, Name} = ListOf) when is_atom(Namespace) andalso is_atom(Name) -> {list_of, ListOf};
 parse_class(_, _) -> {error, ambiguous_class}.
-
-calc_type_require(#type{mixins=Mixins} = T) ->
-    T#type{require=Mixins}.
-
-calc_frame_require(#frame{extend=Extend, fields=Fields} = F) ->
-    Require = [case Field#field.class of
-                   {list_of, Class} -> Class;
-                   {is, Class} -> Class
-               end || Field <- Fields],
-    F#frame{require=lists:usort(Extend ++ Require)}.
 
 is_class_key({Namespace, Name}) when is_atom(Namespace) andalso is_atom(Name) -> true;
 is_class_key(Name) when is_atom(Name) -> true;
@@ -202,10 +186,10 @@ to_class_key(Name) -> {std, Name}.
 
 % TODO update tests
 test_type() ->
-    {error, wrong_type_format} = parse(1),
-    {error, wrong_type_format} = parse({1, 1, 1}),
-    {error, wrong_type_format} = parse({type, 1, 1}),
-    {error, meta_wrong_frame} = parse({type, int, 1}),
+    {error, wrong_meta_format} = parse(1),
+    {error, wrong_meta_format} = parse({1, 1, 1}),
+    {error, wrong_meta_format} = parse({type, 1, 1}),
+    {error, wrong_meta_frame} = parse({type, int, 1}),
     {error, meta_contains_wrong_keys} = parse({type, int, [{a, 1}, {b, 2}, {c, 3}]}),
     {error, meta_is_empty} = parse({type, int, []}),
     {error, meta_is_empty} = parse({type, int, [{mixins, []}]}),

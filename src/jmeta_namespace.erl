@@ -14,6 +14,8 @@
 -include("jtils.hrl").
 
 %% --------------------------------------------------------------------
+-export([test/0]).
+
 %% External exports
 -export([start_link/1, add/1, delete/1, get/1]).
 
@@ -23,6 +25,10 @@
 %% ====================================================================
 %% External functions
 %% ====================================================================
+
+test() ->
+    % TODO
+    ok.
 
 start_link(Namespace) ->
     gen_server:start_link({local, ?NAMESPACE(Namespace)}, ?MODULE, [], []).

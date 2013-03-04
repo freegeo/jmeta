@@ -17,7 +17,9 @@
 -export([% setup
          add/1, delete/1, get/1,
          % meta api
-         is/1, list_of/1]).
+         is/1, list_of/1, cache_for/1,
+         % tests
+         test/0, speed_test/0]).
 
 %%
 %% API Functions
@@ -47,6 +49,17 @@ is(X) ->
 
 list_of(X) ->
     jmeta_check:list_of(X).
+
+cache_for(Scenario) ->
+    jmeta_cache:for(Scenario).
+
+% tests
+
+test() ->
+    jmeta_test:run().
+
+speed_test() ->
+    jmeta_speed_test:run().
 
 %%
 %% Local Functions

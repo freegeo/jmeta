@@ -207,6 +207,6 @@ empty_frame() ->
 base() ->
     {frame, base,
       [{fields,
-        [{id, [{is, integer}]}
+        [{id, [{is, integer}, {optional, true}]}
         ]}
       ]}.
