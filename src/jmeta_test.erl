@@ -24,7 +24,8 @@ run() ->
     ModulesWithTest =
         [Module ||
          Module <- Modules,
-         lists:member({test, 0}, Module:module_info(exports))],
+         lists:member({test, 0}, Module:module_info(exports)),
+         Module =/= jmeta],
     case [R || R <- [check(M) || M <- ModulesWithTest], R =/= {ok, done}] of
         [] -> {ok, complete};
         Errors -> {error, Errors}

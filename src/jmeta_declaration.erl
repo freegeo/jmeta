@@ -27,6 +27,7 @@
 test() ->
     test_type(),
     test_frame(),
+    test_misc(),
     {ok, done}.
 
 parse({type, Name, Meta}) when is_atom(Name) -> parse({type, {std, Name}, Meta});
@@ -199,8 +200,8 @@ test_type() ->
     {error, guards_should_be_unary_funs} = parse({type, int, [{guards, [fun(1, 1) -> true end]}]}),
     {error, mode_wrong_arguments} = parse({type, int, [{guards, [fun is_integer/1]}, {mode, [{mixins, abc}]}]}),
     {error, mode_wrong_arguments} = parse({type, int, [{guards, [fun is_integer/1]}, {mode, [{guards, abc}]}]}),
-    T1 = #type{name=int,
-               mixins=[number],
+    T1 = #type{name={std, int},
+               mixins=[{std, number}],
                guards=[],
                default=undefined,
                mode=#tmode{guards=all,
@@ -215,4 +216,7 @@ test_type() ->
 
 test_frame() ->
     % TODO parse_field and parse (frame) tests
+    ok.
+
+test_misc() ->
     ok.

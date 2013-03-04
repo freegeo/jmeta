@@ -28,7 +28,7 @@
 
 test() ->
     % TODO
-    ok.
+    {ok, done}.
 
 start_link(Namespace) ->
     gen_server:start_link({local, ?NAMESPACE(Namespace)}, ?MODULE, [], []).

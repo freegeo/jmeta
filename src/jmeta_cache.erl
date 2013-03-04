@@ -99,6 +99,7 @@ store(Key, Value, Cache) ->
 extended_fields(Key, Cache) ->
     extend(Key, jframe:new(), Cache).
 
+% TODO inspect and optimize
 extend(#frame{name=Key, extend=Frames, fields=Fields, extended_fields=undefined} = Frame, Result, Cache) ->
     Extend =
         fun(_, {error, _} = E) -> E;
