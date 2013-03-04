@@ -28,7 +28,7 @@
 
 test() ->
     % TODO
-    {ok, done}.
+    jmeta_test:done().
 
 start_link(Namespace) ->
     gen_server:start_link({local, ?NAMESPACE(Namespace)}, ?MODULE, [], []).

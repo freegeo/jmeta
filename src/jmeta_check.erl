@@ -26,7 +26,7 @@
 test() ->
     test_is(),
     test_list_of(),
-    {ok, done}.
+    jmeta_test:done().
 
 % api
 
@@ -120,6 +120,7 @@ process_field({FieldName, #field{class=Class, guards=Guards, optional=Optional}}
             false -> Optional = true;
             true ->
                 true =
+                    % Here we can get more performance if we'll use functions that don't try to use a cache.
                     case Class of
                         {is, Key} -> is({Key, FieldData});
                         {list_of, Key} -> list_of({Key, FieldData})

@@ -22,7 +22,7 @@
 
 test() ->
     [] = [R || {error, _} = R <- [jmeta_declaration:parse(T) || T <- std()]],
-    {ok, done}.
+    jmeta_test:done().
 
 std() ->
     [%----------------------TYPES---------------------

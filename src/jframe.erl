@@ -36,7 +36,7 @@ test() ->
     [{a, 1}, {b, 2}, {c, 3}] = new(new([a, b, c], [1, 2, 3])),
     test_transform(),
     test_base(),
-    {ok, done}.
+    jmeta_test:done().
 
 new() ->
     [].

@@ -7,11 +7,13 @@
 %% Include files
 %%
 
+-define(DONE_KEY, {ok, done}).
+
 %%
 %% Exported Functions
 %%
 
--export([run/0]).
+-export([run/0, done/0]).
 
 %%
 %% API Functions
@@ -26,10 +28,13 @@ run() ->
          Module <- Modules,
          lists:member({test, 0}, Module:module_info(exports)),
          Module =/= jmeta],
-    case [R || R <- [check(M) || M <- ModulesWithTest], R =/= {ok, done}] of
+    case [R || R <- [check(M) || M <- ModulesWithTest], R =/= ?DONE_KEY] of
         [] -> {ok, complete};
         Errors -> {error, Errors}
     end.
+
+done() ->
+    ?DONE_KEY.
 
 %%
 %% Local Functions

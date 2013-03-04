@@ -33,7 +33,7 @@
 test() ->
     test_list(),
     test_misc(),
-    {ok, done}.
+    jmeta_test:done().
 
 % list
 

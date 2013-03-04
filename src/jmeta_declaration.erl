@@ -28,7 +28,7 @@ test() ->
     test_type(),
     test_frame(),
     test_misc(),
-    {ok, done}.
+    jmeta_test:done().
 
 parse({type, Name, Meta}) when is_atom(Name) -> parse({type, {std, Name}, Meta});
 parse({type, {Namespace, Name} = Key, Meta}) when is_atom(Namespace) andalso is_atom(Name) ->

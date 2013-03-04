@@ -18,17 +18,20 @@
 % test
 -export([test/0]).
 
-% api
--export([for/1,
-         type/1, frame/1, type_or_frame/1,
-         extended_fields/1]).
+% external api
+-export([for/1, reset/0]).
+
+% internal api 
+-export([type/1, frame/1, type_or_frame/1, extended_fields/1]).
+
 
 %%
 %% API Functions
 %%
 
 test() ->
-    {ok, done}.
+    % TODO
+    jmeta_test:done().
 
 for(Scenario) ->
     case get(?KEY) of
@@ -40,6 +43,9 @@ for(Scenario) ->
             R;
         _ -> Scenario()
     end.
+
+reset() ->
+    put(?KEY, new()).
 
 type(Key) ->
     std(fun(Cache) -> type(Key, Cache) end).

@@ -17,7 +17,7 @@
 -export([% setup
          add/1, delete/1, get/1,
          % meta api
-         is/1, list_of/1, cache_for/1,
+         is/1, list_of/1, cache_for/1, cache_reset/0,
          % tests
          test/0, speed_test/0]).
 
@@ -52,6 +52,9 @@ list_of(X) ->
 
 cache_for(Scenario) ->
     jmeta_cache:for(Scenario).
+
+cache_reset() ->
+    jmeta_cache:reset().
 
 % tests
 
