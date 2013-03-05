@@ -131,7 +131,10 @@ compare(FrameA, FrameB, [{Field, Method}|CompareFrame]) ->
             Comparer =
                 case Method of
                     '>' -> fun erlang:'>'/2;
-                    '<' -> fun erlang:'<'/2
+                    '<' -> fun erlang:'<'/2;
+                    Fun when is_function(Fun, 2) -> Fun;
+                    NestedCompareFrame when is_list(NestedCompareFrame) ->
+                        fun(A, B) -> compare(A, B, NestedCompareFrame) end
                 end,
             Comparer(find(Field, FrameA), find(Field, FrameB))
     end.

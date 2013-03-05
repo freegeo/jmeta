@@ -11,7 +11,11 @@
 %% Include files
 %% --------------------------------------------------------------------
 
+-include("jmeta.hrl").
 -include("jtils.hrl").
+
+-define(N, jmeta.namespace.test). % test namespace
+-define(TN(X), {?N, X}).
 
 %% --------------------------------------------------------------------
 -export([test/0]).
@@ -27,7 +31,7 @@
 %% ====================================================================
 
 test() ->
-    % TODO
+    test_api(),
     jmeta_test:done().
 
 start_link(Namespace) ->
@@ -42,11 +46,14 @@ add(Meta) ->
                 false -> new(Namespace);
                 true -> dont_care
             end,
-            cast(Namespace, {add, {jmeta_declaration:key(Result), Result}})
+            call(Namespace, {add, {jmeta_declaration:key(Result), Result}})
     end.
 
 delete({Namespace, _} = Key) ->
-    cast(Namespace, {delete, Key}).
+    case call(Namespace, {delete, Key}) of
+        0 -> release(Namespace), 0;
+        Count -> Count
+    end.
 
 get({Namespace, _} = Key) ->
     call(Namespace, {get, Key}).
@@ -81,6 +88,12 @@ handle_call({get, Key}, _, State) ->
                 {ok, Data} -> Data;
                 error -> {error, {Key, is_not_defined}}
             end, State};
+handle_call({add, {Key, Record}}, _, State) ->
+    New = dict:store(Key, Record, State),
+    {reply, dict:size(New), New};
+handle_call({delete, Key}, _, State) ->
+    New = dict:erase(Key, State),
+    {reply, dict:size(New), New};
 handle_call(_, _, State) ->
     {noreply, State}.
 
@@ -91,10 +104,6 @@ handle_call(_, _, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_cast({add, {Key, Record}}, State) ->
-    {noreply, dict:store(Key, Record, State)};
-handle_cast({delete, Key}, State) ->
-    {noreply, dict:erase(Key, State)};
 handle_cast(_, State) ->
     {noreply, State}.
 
@@ -131,17 +140,40 @@ code_change(_, State, _) ->
 new(Namespace) ->
     supervisor:start_child(jmeta_sup, [Namespace]).
 
+release(Namespace) ->
+    supervisor:terminate_child(jmeta_sup, whereis(?NAMESPACE(Namespace))).
+
 exists(Namespace) ->
     whereis(?NAMESPACE(Namespace)) =/= undefined.
-
-cast(Namespace, Request) ->
-    case exists(Namespace) of
-        true -> gen_server:cast(?NAMESPACE(Namespace), Request);
-        false -> {error, {wrong_namespace, Namespace}}
-    end.
 
 call(Namespace, Request) ->
     case exists(Namespace) of
         true -> gen_server:call(?NAMESPACE(Namespace), Request);
         false -> {error, {wrong_namespace, Namespace}}
     end.
+
+test_api() ->
+    TestTypes =
+        [case Meta of
+             {type, Name, Data} -> {type, ?TN(Name), Data};
+             {frame, Name, Data} -> {frame, ?TN(Name), Data}
+         end || Meta <- lists:sublist(jmeta_library:std(), 3)],
+    First = lists:nth(1, TestTypes),
+    Second = lists:nth(2, TestTypes),
+    Third = lists:nth(3, TestTypes),
+    false = exists(?N),
+    1 = add(First), true = exists(?N),
+    2 = add(Second), true = exists(?N),
+    3 = add(Third), true = exists(?N),
+    F = jmeta_declaration:parse(First),
+    S = jmeta_declaration:parse(Second),
+    T = jmeta_declaration:parse(Third),
+    FK = jmeta_declaration:key(F),
+    SK = jmeta_declaration:key(S),
+    TK = jmeta_declaration:key(T),
+    F = ?MODULE:get(FK),
+    S = ?MODULE:get(SK),
+    T = ?MODULE:get(TK),
+    2 = delete(FK), true = exists(?N),
+    1 = delete(SK), true = exists(?N),
+    0 = delete(TK), false = exists(?N).

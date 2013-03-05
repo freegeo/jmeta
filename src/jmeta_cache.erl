@@ -24,7 +24,6 @@
 % internal api 
 -export([type/1, frame/1, type_or_frame/1, extended_fields/1]).
 
-
 %%
 %% API Functions
 %%

@@ -5,4 +5,4 @@
 -define(WORKER(Module), ?WORKER(Module, [])).
 -define(SUPERVISOR(Module, Args), {Module, {Module, start_link, Args}, permanent, infinity, supervisor, [Module]}).
 -define(SUPERVISOR(Module), ?SUPERVISOR(Module, [])).
--define(NAMESPACE(Name), list_to_atom("jmeta_" ++ atom_to_list(Name))).
+-define(NAMESPACE(Name), list_to_atom("jmeta." ++ atom_to_list(Name))).
