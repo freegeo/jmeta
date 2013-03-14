@@ -37,7 +37,7 @@ for(Scenario) ->
         undefined ->
             put(?KEY, new()),
             R = Scenario(),
-            %io:format(<<"Cache:~n~p~n~nResult:~n">>, [get(?KEY)]), % cache info
+            % io:format(<<"Cache:~n~p~n~nResult:~n">>, [get(?KEY)]), % cache info
             erase(?KEY),
             R;
         _ -> Scenario()
@@ -66,18 +66,15 @@ new() ->
     []. % proplist for types and frames
 
 std(Scenario) ->
-    case Scenario(get(?KEY)) of
-        {error, _} = E -> E;
-        {ok, Value, Cache} ->
-            put(?KEY, Cache),
-            Value
-    end.
+    {ok, Value, Cache} = Scenario(get(?KEY)),
+    put(?KEY, Cache),
+    Value.
 
 lookup(Key, Cache, OnData) ->
     case proplists:get_value(Key, Cache) of
         undefined ->
             case jmeta_namespace:get(Key) of
-                {error, _} = E -> E;
+                {error, Reason} -> jmeta_exception:new(Reason);
                 Data -> OnData({jmeta_declaration:kind(Data), Data})
             end;
         Value -> {ok, Value, Cache}
@@ -86,13 +83,13 @@ lookup(Key, Cache, OnData) ->
 type(Key, Cache) ->
     lookup(Key, Cache,
            fun({type, Data}) -> {ok, Data, [{Key, Data}|Cache]};
-              ({frame, _}) -> {error, {Key, expected_type_but_frame_found}}
+              ({frame, _}) -> jmeta_exception:new({Key, expected_type_but_frame_found})
            end).
 
 frame(Key, Cache) ->
     lookup(Key, Cache,
            fun({frame, Data}) -> {ok, Data, [{Key, Data}|Cache]};
-              ({type, _}) -> {error, {Key, expected_frame_but_type_found}}
+              ({type, _}) -> jmeta_exception:new({Key, expected_frame_but_type_found})
            end).
 
 type_or_frame(Key, Cache) ->
@@ -104,28 +101,15 @@ store(Key, Value, Cache) ->
 extended_fields(Key, Cache) ->
     extend(Key, jframe:new(), Cache).
 
-% TODO inspect and optimize
 extend(#frame{name=Key, extend=Frames, fields=Fields, extended_fields=undefined} = Frame, Result, Cache) ->
-    Extend =
-        fun(_, {error, _} = E) -> E;
-           (F, {Extended, OldCache}) ->
-                case extend(F, Extended, OldCache) of
-                    {error, _} = E -> E;
-                    {ok, Value, NewCache} -> {Value, NewCache}
-                end
-        end,
-    case lists:foldl(Extend, {jframe:new(), Cache}, Frames) of
-        {error, _} = E -> E;
-        {ResultExtended, ResultCache} ->
-            ExtendedFields = jframe:extend(ResultExtended, [{Field#field.name, Field} || Field <- Fields]),
-            ResultFrame = Frame#frame{extended_fields=ExtendedFields},
-            extend(ResultFrame, Result, store(Key, ResultFrame, ResultCache))
-    end;
+    Extend = fun(F, {ok, Extended, OldCache}) -> extend(F, Extended, OldCache) end,
+    {ok, ResultExtended, ResultCache} = lists:foldl(Extend, {ok, jframe:new(), Cache}, Frames),
+    ExtendedFields = jframe:extend(ResultExtended, [{Field#field.name, Field} || Field <- Fields]),
+    ResultFrame = Frame#frame{extended_fields=ExtendedFields},
+    extend(ResultFrame, Result, store(Key, ResultFrame, ResultCache));
 extend(#frame{extended_fields=ExtendedFields}, Result, Cache) ->
     {ok, jframe:extend(Result, ExtendedFields), Cache};
 extend({_, _} = Key, Result, Cache) ->
-    case frame(Key, Cache) of
-        {error, _} = E -> E;
-        {ok, Value, NewCache} -> extend(Value, Result, NewCache)
-    end;
-extend(_, _, _) -> {error, extend_fields_format}.
+    {ok, Value, NewCache} = frame(Key, Cache),
+    extend(Value, Result, NewCache);
+extend(_, _, _) -> jmeta_exception:new(extend_fields_format).

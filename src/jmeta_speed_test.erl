@@ -22,7 +22,7 @@
 run(Repeats, UseCache) ->
     Scenario =
         fun() ->
-                {ok, [{stup, test(fun test_setup/0, Repeats)},
+                {ok, [{setup, test(fun test_setup/0, Repeats)},
                       {api, test(fun test_api/0, Repeats)}]}
         end,
     case UseCache of

@@ -30,6 +30,7 @@
 
 test() ->
     test_api(),
+    test_behaviour(),
     jmeta_test:done().
 
 start_link(Namespace) ->
@@ -175,3 +176,9 @@ test_api() ->
     2 = delete(FK), true = exists(?N),
     1 = delete(SK), true = exists(?N),
     0 = delete(TK), false = exists(?N).
+
+test_behaviour() ->
+    {error, {wrong_namespace, some.strange.namespace}} =
+        ?MODULE:get({some.strange.namespace, some.undefined.meta}),
+    {error, {{std, some.undefined.meta}, is_not_defined}} =
+        ?MODULE:get({std, some.undefined.meta}).

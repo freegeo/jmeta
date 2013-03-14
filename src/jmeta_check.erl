@@ -51,13 +51,7 @@ list_of(_) -> {error, wrong_list_check_format}.
 %%
 
 initial(Key, Selector) ->
-    Scenario =
-        fun() ->
-                case jmeta_cache:type_or_frame(Key) of
-                    {error, _} = E -> E;
-                    Meta -> Selector(jmeta_declaration:kind(Meta))
-                end
-        end,
+    Scenario = fun() -> Selector(jmeta_declaration:kind(jmeta_cache:type_or_frame(Key))) end,
     jmeta_cache:for(Scenario).
 
 list_of(Checker, ListOfRawData) ->
@@ -82,55 +76,50 @@ list_of_frame(Key, ListOfRawData) ->
     list_of(fun(RawData) -> is_frame(Key, RawData) end, ListOfRawData).
 
 is_type(Key, RawData) ->
-    try
-        % Maybe we can make it more informative.
-        % Just try rethrow missing type error.
-        #type{mode=#tmode{guards=MGuards, mixins=MMixins},
-              guards=Guards, mixins=Mixins} = jmeta_cache:type(Key),
-        true = lists:MMixins(fun(Mixin) -> true =:= is_type(Mixin, RawData) end, Mixins),
-        true = lists:MGuards(fun(Guard) -> true =:= Guard(RawData) end, Guards)
-    catch
-        _:_ -> {error, {not_a, Key}}
-    end.
+    Scenario =
+        fun() ->
+                #type{mode=#tmode{guards=MGuards, mixins=MMixins},
+                      guards=Guards, mixins=Mixins} = jmeta_cache:type(Key),
+                true = lists:MMixins(fun(Mixin) -> true =:= is_type(Mixin, RawData) end, Mixins),
+                true = lists:MGuards(fun(Guard) -> true =:= Guard(RawData) end, Guards)
+        end,
+    jmeta_exception:safe_try(Scenario, fun(_) -> {error, {not_a, Key}} end).
 
 is_frame(Key, RawData) ->
     case true =:= jframe:is_frame(RawData) of
         false -> {error, not_a_frame};
         true ->
-            case jmeta_cache:extended_fields(Key) of
-                {error, _} = E -> E;
-                Fields ->
-                    {Violated, Rest} = lists:foldl(fun process_field/2, {[], RawData}, Fields),
-                    case Violated of
-                        [] ->
-                            case Rest of
-                                [] -> true;
-                                _ -> {error, {extra_keys, jframe:keys(Rest)}}
-                            end;
-                        _ -> {error, [{not_a, Key}, {violated, Violated}]}
-                    end
+            Fields = jmeta_cache:extended_fields(Key),
+            {Violated, Rest} = lists:foldl(fun process_field/2, {[], RawData}, Fields),
+            case Violated of
+                [] ->
+                    case Rest of
+                        [] -> true;
+                        _ -> {error, {extra_keys, jframe:keys(Rest)}}
+                    end;
+                _ -> {error, [{not_a, Key}, {violated, Violated}]}
             end
     end.
 
 process_field({FieldName, #field{class=Class, guards=Guards, optional=Optional}},
               {Violated, Frame}) ->
     {FieldData, Rest} = jframe:take(FieldName, Frame),
-    try
-        case jframe:has(FieldName, Frame) of
-            false -> Optional = true;
-            true ->
-                true =
-                    % Here we can get more performance if we'll use functions that don't try to use a cache.
-                    case Class of
-                        {is, Key} -> is({Key, FieldData});
-                        {list_of, Key} -> list_of({Key, FieldData})
-                    end,
-                lists:all(fun(Guard) -> true = Guard(FieldData) end, Guards)
+    Scenario =
+        fun() ->
+                case jframe:has(FieldName, Frame) of
+                    false -> Optional = true;
+                    true ->
+                        true =
+                            % Here we can get more performance if we'll use functions that don't try to use a cache.
+                            case Class of
+                                {is, Key} -> is({Key, FieldData});
+                                {list_of, Key} -> list_of({Key, FieldData})
+                            end,
+                        lists:all(fun(Guard) -> true = Guard(FieldData) end, Guards)
+                end,
+                {Violated, Rest}
         end,
-        {Violated, Rest}
-    catch
-        _:_ -> {[FieldName|Violated], Rest}
-    end.
+    jmeta_exception:safe_try(Scenario, fun(_) -> {[FieldName|Violated], Rest} end).
 
 % TODO tests
 test_is() ->
