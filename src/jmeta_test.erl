@@ -29,7 +29,7 @@ run() ->
          lists:member({test, 0}, Module:module_info(exports)),
          Module =/= jmeta],
     case [R || R <- [check(M) || M <- ModulesWithTest], R =/= ?DONE_KEY] of
-        [] -> {ok, complete};
+        [] -> integration_test();
         Errors -> {error, Errors}
     end.
 
@@ -46,3 +46,6 @@ check(M) ->
     catch
         _:Why -> [{module, M}, {reason, Why}, {stack, erlang:get_stacktrace()}]
     end.
+
+integration_test() ->
+    {ok, complete}.

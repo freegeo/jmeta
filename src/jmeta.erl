@@ -19,7 +19,8 @@
          % meta api
          is/1, list_of/1, cache_for/1, cache_reset/0,
          % tests
-         test/0, speed_test/0]).
+         test/0,
+         speed_test/0, speed_test/1, speed_test/2]).
 
 %%
 %% API Functions
@@ -62,7 +63,13 @@ test() ->
     jmeta_test:run().
 
 speed_test() ->
-    jmeta_speed_test:run().
+    speed_test(1000).
+
+speed_test(Repeats) ->
+    jmeta_speed_test:run(Repeats, true).
+
+speed_test(Repeats, UseCache) ->
+    jmeta_speed_test:run(Repeats, UseCache).
 
 %%
 %% Local Functions

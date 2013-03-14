@@ -13,9 +13,7 @@
 
 -include("jmeta.hrl").
 -include("jtils.hrl").
-
--define(N, jmeta.namespace.test). % test namespace
--define(TN(X), {?N, X}).
+-include("jtest.hrl").
 
 %% --------------------------------------------------------------------
 -export([test/0]).

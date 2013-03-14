@@ -7,30 +7,73 @@
 %% Include files
 %%
 
+-include("jtest.hrl").
+
 %%
 %% Exported Functions
 %%
 
--export([run/0]).
+-export([run/2]).
 
 %%
 %% API Functions
 %%
 
-run() ->
-    Result = {ok, [{load, test_load()}, {api, test_api()}]},
-    cleanup(),
-    Result.
+run(Repeats, UseCache) ->
+    Scenario =
+        fun() ->
+                {ok, [{stup, test(fun test_setup/0, Repeats)},
+                      {api, test(fun test_api/0, Repeats)}]}
+        end,
+    case UseCache of
+        true -> jmeta:cache_for(Scenario);
+        false -> Scenario()
+    end.
 
 %%
 %% Local Functions
 %%
 
-test_load() ->
-    ok.
+test(F, Repeats) ->
+    {Result, ok} = timer:tc(fun() -> lists:foreach(fun(_) -> F() end, lists:seq(1, Repeats)) end),
+    {Result / 1000 / 1000, sec}.
+
+test_setup() ->
+    TestTypes =
+        [case Meta of
+             {type, Name, Data} -> {type, ?TN(Name), Data};
+             {frame, Name, Data} -> {frame, ?TN(Name), Data}
+         end || Meta <- jmeta_library:std()],
+    lists:foreach(fun jmeta:add/1, TestTypes),
+    lists:foreach(fun jmeta:delete/1,
+                  [case Meta of
+                       {type, Name, _} -> Name;
+                       {frame, Name, _} -> Name
+                   end || Meta <- TestTypes]).
 
 test_api() ->
-    ok.
-
-cleanup() ->
-    ok.
+    Tests =
+        [{atom, ok},
+         {numeric, 10.23},
+         {integer, 100},
+         {bit, 1},
+         {float, 1.234},
+         {boolean, true},
+         {list, []},
+         {non_empty_list, "ABC"},
+         {set_keys, [<<"a">>, <<"b">>, <<"c">>]},
+         {set_refs, [1, 2, 3]},
+         {list_of_frames, [[], [], []]},
+         {tuple, {1, 2, 3}},
+         {string, <<>>},
+         {string128, <<>>},
+         {binary, <<>>},
+         {iso8601, <<"20080204T235555">>},
+         {timestamp, {{2013, 03, 14}, {3, 48, 55.2}}},
+         {timestamp_range, [{{2013, 03, 14}, {3, 48, 55.2}},
+                            {{2013, 03, 15}, {0, 0, 0.0}}]},
+         {frame, [{a, 1}, {b, 2}]},
+         {new_frame, [{a, 1}, {b, 2}]},
+         {empty_frame, []},
+         {base, [{id, 1}]}],
+    lists:foreach(fun(X) -> true = jmeta:is(X) end, Tests).

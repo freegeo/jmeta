@@ -176,7 +176,7 @@ timestamp_range() ->
     {type, timestamp_range,
      [{mixins, [list]},
       {guards, [fun([T1, T2]) ->
-                        Check = fun(T) -> true = jmeta:is_type({timestamp, T}) end,
+                        Check = fun(T) -> true = jmeta:is({timestamp, T}) end,
                         Check(T1), Check(T2),
                         T1 =< T2
                 end]},
