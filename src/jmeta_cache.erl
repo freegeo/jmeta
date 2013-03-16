@@ -37,7 +37,7 @@ for(Scenario) ->
         undefined ->
             put(?KEY, new()),
             R = Scenario(),
-            % io:format(<<"Cache:~n~p~n~nResult:~n">>, [get(?KEY)]), % cache info
+            %io:format(<<"Cache:~n~p~n~nResult:~n">>, [get(?KEY)]), % cache info
             erase(?KEY),
             R;
         _ -> Scenario()

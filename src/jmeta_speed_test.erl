@@ -51,6 +51,7 @@ test_setup() ->
                        {frame, Name, _} -> Name
                    end || Meta <- TestTypes]).
 
+% TODO more tests for frames 
 test_api() ->
     Tests =
         [{atom, ok},
@@ -68,10 +69,15 @@ test_api() ->
          {string, <<>>},
          {string128, <<>>},
          {binary, <<>>},
-         {iso8601, <<"20080204T235555">>},
-         {timestamp, {{2013, 03, 14}, {3, 48, 55.2}}},
-         {timestamp_range, [{{2013, 03, 14}, {3, 48, 55.2}},
-                            {{2013, 03, 15}, {0, 0, 0.0}}]},
+         {date, {2013, 2, 16}},
+         {time.a, {0, 0, 0}},
+         {time.b, {0, 0, 0.0}},
+         {timestamp.a, {{2013, 03, 14}, {3, 48, 55}}},
+         {timestamp.b, {{2013, 03, 14}, {3, 48, 55.0}}},
+         {timestamp_range.a, [{{2013, 03, 14}, {3, 48, 55}},
+                              {{2013, 03, 15}, {0, 0, 0}}]},
+         {timestamp_range.b, [{{2013, 03, 14}, {3, 48, 55.0}},
+                              {{2013, 03, 15}, {0, 0, 0.0}}]},
          {frame, [{a, 1}, {b, 2}]},
          {new_frame, [{a, 1}, {b, 2}]},
          {empty_frame, []},

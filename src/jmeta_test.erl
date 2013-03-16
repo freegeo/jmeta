@@ -47,5 +47,6 @@ check(M) ->
         _:Why -> [{module, M}, {reason, Why}, {stack, erlang:get_stacktrace()}]
     end.
 
+% TODO
 integration_test() ->
     {ok, complete}.

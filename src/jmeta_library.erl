@@ -37,9 +37,7 @@ test() ->
     test_string(),
     test_string128(),
     test_binary(),
-    test_iso8601(),
-    test_timestamp(),
-    test_timestamp_range(),
+    test_datetime(),
     test_frame(),
     test_new_frame(),
     test_empty_frame(),
@@ -69,9 +67,13 @@ std() ->
      string128(),
      binary(),
      % datetime
-     iso8601(),
-     timestamp(),
-     timestamp_range(),
+     date_(),
+     timea(),
+     timeb(),
+     timestampa(),
+     timestampb(),
+     timestamp_rangea(),
+     timestamp_rangeb(),
      % frame
      frame(),
      new_frame(),
@@ -240,42 +242,127 @@ test_binary() ->
 
 % datetime
 
-% FIXME
-iso8601() ->
-    {type, iso8601,
-     [{guards, [fun(<<_:64/bitstring, "T", _:48/bitstring>>) -> true;
-                   (_) -> false
+date_() ->
+    {type, date,
+     [{guards, [fun calendar:valid_date/1]},
+      {default, fun date/0}]}.
+
+timea() ->
+    {type, time.a,
+     [{guards, [fun({H, M, S}) when is_integer(H) andalso is_integer(M) andalso is_integer(S) ->
+                        H >= 0 andalso H < 24 andalso
+                            M >= 0 andalso M < 60 andalso
+                            S >= 0 andalso S < 60
                 end]},
-      {default, <<"20000101T000000">>}]}.
+      {default, fun time/0}]}.
 
-test_iso8601() ->
-    ok.
+default_timeb() ->
+    {H, M, S} = time(),
+    {H, M, float(S)}.
 
-% FIXME
-timestamp() ->
-    {type, timestamp,
-     [{guards, [fun({{Y, M, D}, {H, N, S}}) when is_float(S) ->
-                        lists:all(fun is_integer/1, [Y, M, D, H, N]);
-                   (_) -> false
+timeb() ->
+    {type, time.b,
+     [{guards, [fun({H, M, S}) when is_float(S) ->
+                        true = jmeta:is({time.a, {H, M, trunc(S)}})
                 end]},
-      {default, {{2000, 1, 1}, {0, 0, 0.0}}}]}.
+      {default, fun default_timeb/0}]}.
 
-test_timestamp() ->
-    ok.
+timestamp_guard(TimeVersion) ->
+    fun({Date, Time}) ->
+            true = jmeta:is({date, Date}),
+            true = jmeta:is({TimeVersion, Time})
+    end.
 
-% FIXME
-timestamp_range() ->
-    {type, timestamp_range,
-     [{guards, [fun([T1, T2]) ->
-                        Check = fun(T) -> true = jmeta:is({timestamp, T}) end,
-                        Check(T1), Check(T2),
-                        T1 =< T2
-                end]},
-      {default, [{{2000, 1, 1}, {0, 0, 0.0}},
-                 {{2001, 1, 1}, {0, 0, 0.0}}]}]}.
+timestampa() ->
+    {type, timestamp.a,
+     [{guards, [timestamp_guard(time.a)]},
+      {default, fun calendar:local_time/0}]}.
 
-test_timestamp_range() ->
-    ok.
+default_timestampb() ->
+    {date(), default_timeb()}.
+
+timestampb() ->
+    {type, timestamp.b,
+     [{guards, [timestamp_guard(time.b)]},
+      {default, fun default_timestampb/0}]}.
+
+timestamp_range_guard(TimestampVersion) ->
+    fun([T1, T2] = Range) ->
+            true = jmeta:list_of({TimestampVersion, Range}),
+            T1 =< T2
+    end.
+
+timestamp_rangea() ->
+    {type, timestamp_range.a,
+     [{guards, [timestamp_range_guard(timestamp.a)]},
+      {default, fun() -> T = calendar:local_time(), [T, T] end}]}.
+
+timestamp_rangeb() ->
+    {type, timestamp_range.b,
+     [{guards, [timestamp_range_guard(timestamp.b)]},
+      {default, fun() -> T = default_timestampb(), [T, T] end}]}.
+
+test_datetime() ->
+    GoodDateList =
+        [date(),
+         {0, 1, 1},
+         {2013, 12, 31},
+         {2013, 2, 28}], 
+    each(date, GoodDateList),
+    BadDateList =
+        [{2013, 2, 29},
+         {2013, 2, 0},
+         {2013, 0, 1},
+         {2013, 13, 1},
+         {-1, 1, 1}],
+    each_is_not(date, BadDateList),
+    GoodTimeAList =
+        [time(),
+         {0, 0, 0},
+         {23, 59, 59},
+         {9, 48, 21}],
+    each(time.a, GoodTimeAList),
+    BadTimeAList =
+        [{0, 0, -1},
+         {0, 0, 60},
+         {0, -1, 0},
+         {0, 60, 0},
+         {-1, 0, 0},
+         {24, 0, 0}],
+    each_is_not(time.a, BadTimeAList),
+    TimeAToTimeB = fun({H, M, S}) -> {H, M, float(S)} end,
+    GoodTimeBList = lists:map(TimeAToTimeB, GoodTimeAList),
+    each(time.b, GoodTimeBList),
+    BadTimeBList = lists:map(TimeAToTimeB, BadTimeAList),
+    each_is_not(time.b, BadTimeBList),
+    GoodTimestampAList = [{D, T} || D <- GoodDateList, T <- GoodTimeAList],
+    each(timestamp.a, [calendar:local_time()|GoodTimestampAList]),
+    BadTimestampAList =
+        [{D, T} || D <- GoodDateList, T <- BadTimeAList] ++
+            [{D, T} || D <- BadDateList, T <- GoodTimeAList],
+    each_is_not(timestamp.a, BadTimestampAList),
+    GoodTimestampBList = [{D, T} || D <- GoodDateList, T <- GoodTimeBList],
+    each(timestamp.b, GoodTimestampBList),
+    BadTimestampBList =
+        [{D, T} || D <- GoodDateList, T <- BadTimeBList] ++
+            [{D, T} || D <- BadDateList, T <- GoodTimeBList],
+    each_is_not(timestamp.b, BadTimestampBList),
+    GoodTimeStampA1 = {date(), {0, 0, 0}},
+    GoodTimeStampA2 = {date(), {1, 0, 0}},
+    GoodTimestampRangeAList =
+        [[GoodTimeStampA1, GoodTimeStampA2]] ++ [[T, T] || T <- GoodTimestampAList],
+    each(timestamp_range.a, GoodTimestampRangeAList),
+    BadTimestampRangeAList =
+        [[GoodTimeStampA2, GoodTimeStampA1]] ++ [[T, T] || T <- BadTimestampAList],
+    each_is_not(timestamp_range.a, BadTimestampRangeAList),
+    GoodTimeStampB1 = {date(), {0, 0, 0.0}},
+    GoodTimeStampB2 = {date(), {1, 0, 0.0}},
+    GoodTimestampRangeBList =
+        [[GoodTimeStampB1, GoodTimeStampB2]] ++ [[T, T] || T <- GoodTimestampBList],
+    each(timestamp_range.b, GoodTimestampRangeBList),
+    BadTimestampRangeBList =
+        [[GoodTimeStampB2, GoodTimeStampB1]] ++ [[T, T] || T <- BadTimestampBList],
+    each_is_not(timestamp_range.b, BadTimestampRangeBList).
 
 % frame
 

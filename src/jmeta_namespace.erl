@@ -163,6 +163,7 @@ test_api() ->
     false = exists(?N),
     1 = add(First), true = exists(?N),
     2 = add(Second), true = exists(?N),
+    2 = add(Second), true = exists(?N), % add just replace old meta
     3 = add(Third), true = exists(?N),
     F = jmeta_declaration:parse(First),
     S = jmeta_declaration:parse(Second),
@@ -175,6 +176,7 @@ test_api() ->
     T = ?MODULE:get(TK),
     2 = delete(FK), true = exists(?N),
     1 = delete(SK), true = exists(?N),
+    1 = delete(SK), true = exists(?N), % delete by non existing key just ignored
     0 = delete(TK), false = exists(?N).
 
 test_behaviour() ->

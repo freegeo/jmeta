@@ -13,9 +13,6 @@
 %% Exported Functions
 %%
 
-% test
--export([test/0]).
-
 % api
 -export([is/1, list_of/1]).
 
@@ -23,36 +20,34 @@
 %% API Functions
 %%
 
-test() ->
-    test_is(),
-    test_list_of(),
-    jmeta_test:done().
+is(X) ->
+    jmeta_cache:for(fun() -> is_(X) end).
 
-% api
-
-is({{_, _} = Key, RawData}) ->
-    initial(Key,
-            fun(type) -> is_type(Key, RawData);
-               (frame) -> is_frame(Key, RawData)
-            end);
-is({Name, RawData}) when is_atom(Name) -> is({{std, Name}, RawData});
-is(_) -> {error, wrong_check_format}.
-
-list_of({{_, _} = Key, RawData}) ->
-    initial(Key,
-            fun(type) -> list_of_type(Key, RawData);
-               (frame) -> list_of_frame(Key, RawData)
-            end);
-list_of({Name, RawData}) when is_atom(Name) -> list_of({{std, Name}, RawData});
-list_of(_) -> {error, wrong_list_check_format}.
+list_of(X) ->
+    jmeta_cache:for(fun() -> list_of_(X) end).
 
 %%
 %% Local Functions
 %%
 
+is_({{_, _} = Key, RawData}) ->
+    initial(Key,
+            fun(type) -> is_type(Key, RawData);
+               (frame) -> is_frame(Key, RawData)
+            end);
+is_({Name, RawData}) when is_atom(Name) -> is_({{std, Name}, RawData});
+is_(_) -> {error, wrong_check_format}.
+
+list_of_({{_, _} = Key, RawData}) ->
+    initial(Key,
+            fun(type) -> list_of_type(Key, RawData);
+               (frame) -> list_of_frame(Key, RawData)
+            end);
+list_of_({Name, RawData}) when is_atom(Name) -> list_of_({{std, Name}, RawData});
+list_of_(_) -> {error, wrong_list_check_format}.
+
 initial(Key, Selector) ->
-    Scenario = fun() -> Selector(jmeta_declaration:kind(jmeta_cache:type_or_frame(Key))) end,
-    jmeta_cache:for(Scenario).
+    Selector(jmeta_declaration:kind(jmeta_cache:type_or_frame(Key))).
 
 list_of(Checker, ListOfRawData) ->
     Check =
@@ -110,20 +105,12 @@ process_field({FieldName, #field{class=Class, guards=Guards, optional=Optional}}
                     false -> Optional = true;
                     true ->
                         true =
-                            % Here we can get more performance if we'll use functions that don't try to use a cache.
                             case Class of
-                                {is, Key} -> is({Key, FieldData});
-                                {list_of, Key} -> list_of({Key, FieldData})
+                                {is, Key} -> is_({Key, FieldData});
+                                {list_of, Key} -> list_of_({Key, FieldData})
                             end,
                         lists:all(fun(Guard) -> true = Guard(FieldData) end, Guards)
                 end,
                 {Violated, Rest}
         end,
     jmeta_exception:safe_try(Scenario, fun(_) -> {[FieldName|Violated], Rest} end).
-
-% TODO tests
-test_is() ->
-    ok.
-
-test_list_of() ->
-    ok.
