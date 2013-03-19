@@ -94,7 +94,8 @@ integration_test() ->
     % types and variative guards
     jmeta:add({type, ?N(str),
                [{guards, [fun is_list/1, fun is_bitstring/1]},
-                {mode, [{guards, any}]}]}),
+                {mode, [{guards, any}]}
+               ]}),
     true = jmeta:is({?N(str), "jmeta"}),
     true = jmeta:is({?N(str), <<"jmeta">>}),
     false = true =:= jmeta:is({?N(str), 32#jmeta}),
@@ -150,6 +151,28 @@ integration_test() ->
     true = jmeta:is({?WMS(arrival), A4}),
     A5 = jframe:update({items, fun([Item]) -> lists:duplicate(10, Item) end}, A4),
     true = jmeta:is({?WMS(arrival), A5}),
+    % override fields via extend
+    jmeta:add({frame, ?WMS(arrival.a),
+               [{extend, [?WMS(arrival)]},
+                {fields,
+                 [{nr, [{is, integer}]}
+                 ]}
+               ]}),
+    {error, [_, {violated, [nr]}]} = jmeta:is({?WMS(arrival.a), A5}),
+    A6 = jframe:store({nr, 123}, A5),
+    true = jmeta:is({?WMS(arrival.a), A6}),
+    % invalidation
+    Scenario =
+        fun() ->
+                jmeta:add({frame, ?N(test.cache), [{extend, [base]}]}),
+                TC1 = [{id, 1}],
+                true = jmeta:is({?N(test.cache), TC1}),
+                jmeta:add({frame, ?N(test.cache), [{fields, [{id, [{is, string128}]}]}]}),
+                true = jmeta:is({?N(test.cache), TC1}),
+                jmeta:cache_reset(),
+                {error,[_, {violated, [id]}]} = jmeta:is({?N(test.cache), TC1})
+        end,
+    jmeta:cache_for(Scenario),
     cleanup(),
     {ok, complete}.
 
@@ -161,5 +184,7 @@ cleanup() ->
          ?N(foreign_key),
          ?N(str),
          ?WMS(arrival),
-         ?WMS(arrival_item)],
+         ?WMS(arrival_item),
+         ?WMS(arrival.a),
+         ?N(test.cache)],
     lists:foreach(fun jmeta:delete/1, Types).
