@@ -23,6 +23,7 @@
 test() ->
     [] = [R || {error, _} = R <- [jmeta_declaration:parse(T) || T <- std()]],
     test_atom(),
+    test_null(),
     test_numeric(),
     test_integer(),
     test_bit(),
@@ -47,6 +48,7 @@ test() ->
 std() ->
     [%----------------------TYPES---------------------
      atom(),
+     null(),
      % numeric
      numeric(),
      integer(),
@@ -101,6 +103,15 @@ atom() ->
 test_atom() ->
     each(atom, [ok, '', 'hey.hey', 'Hello My Friend', '+', a.b.c]),
     each_is_not(atom, [<<>>, ""]).
+
+null() ->
+    {type, null,
+     [{guards, [fun(null) -> true end]},
+      {default, null}]}.
+
+test_null() ->
+    each(null, [null, 'null']),
+    each_is_not(null, ["null", <<"null">>, undefined, nil]).
 
 % numeric
 

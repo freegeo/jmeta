@@ -55,6 +55,7 @@ test_setup() ->
 test_api() ->
     Tests =
         [{atom, ok},
+         {null, null},
          {numeric, 10.23},
          {integer, 100},
          {bit, 1},
