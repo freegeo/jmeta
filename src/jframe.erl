@@ -14,7 +14,7 @@
 %%
 
 % test
--export([test/0, test_compare_and_sort/0]).
+-export([test/0]).
 
 % api
 -export([new/0, new/1, new/2,
