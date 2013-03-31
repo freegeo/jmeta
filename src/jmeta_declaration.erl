@@ -25,6 +25,7 @@
 %%
 
 test() ->
+    test_parse_behaviour(),
     test_type(),
     test_frame(),
     test_misc(),
@@ -118,15 +119,18 @@ parse(_) -> {error, wrong_meta_format}.
 
 namespace(#type{name={Namespace, _}}) -> Namespace;
 namespace(#frame{name={Namespace, _}}) -> Namespace;
-namespace(_) -> {error, unknown_record}. 
+namespace({_, {Namespace, _}, _}) -> Namespace;
+namespace(_) -> {error, unknown_format}.
 
 name(#type{name={_, Name}}) -> Name;
 name(#frame{name={_, Name}}) -> Name;
-name(_) -> {error, unknown_record}.
+name({_, {_, Name}, _}) -> Name;
+name(_) -> {error, unknown_format}.
 
 key(#type{name=Key}) -> Key;
 key(#frame{name=Key}) -> Key;
-key(_) -> {error, unknown_record}.
+key({_, {_, _} = Key, _}) -> Key;
+key(_) -> {error, unknown_format}.
 
 kind(#type{}) -> type;
 kind(#frame{}) -> frame;
@@ -185,11 +189,13 @@ is_list_of_unary_funs(List) ->
 to_class_key({_, _} = X) -> X;
 to_class_key(Name) -> {std, Name}.
 
-% TODO update tests
-test_type() ->
+test_parse_behaviour() ->
     {error, wrong_meta_format} = parse(1),
     {error, wrong_meta_format} = parse({1, 1, 1}),
     {error, wrong_meta_format} = parse({type, 1, 1}),
+    {error, wrong_meta_format} = parse({frame, 1, 1}).
+
+test_type() ->
     {error, wrong_meta_frame} = parse({type, int, 1}),
     {error, meta_contains_wrong_keys} = parse({type, int, [{a, 1}, {b, 2}, {c, 3}]}),
     {error, meta_is_empty} = parse({type, int, []}),

@@ -49,7 +49,6 @@ check(M) ->
         _:Why -> [{module, M}, {reason, Why}, {stack, erlang:get_stacktrace()}]
     end.
 
-% TODO
 integration_test() ->
     % types and mixins
     DateISO8601a = <<"20130228">>, % YYYYMMDD
@@ -164,10 +163,16 @@ integration_test() ->
     % invalidation
     Scenario =
         fun() ->
-                jmeta:add({frame, ?N(test.cache), [{extend, [base]}]}),
+                jmeta:add({frame, ?N(test.cache),
+                           [{extend, [base]}
+                           ]}),
                 TC1 = [{id, 1}],
                 true = jmeta:is({?N(test.cache), TC1}),
-                jmeta:add({frame, ?N(test.cache), [{fields, [{id, [{is, string128}]}]}]}),
+                jmeta:add({frame, ?N(test.cache),
+                           [{fields,
+                             [{id, [{is, string128}]}
+                             ]}
+                           ]}),
                 true = jmeta:is({?N(test.cache), TC1}),
                 jmeta:cache_reset(),
                 {error,[_, {violated, [id]}]} = jmeta:is({?N(test.cache), TC1})
