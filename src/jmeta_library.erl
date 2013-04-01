@@ -97,8 +97,8 @@ each_is_not(Meta, List) ->
 
 atom() ->
     {type, atom,
-     [{guards, [fun is_atom/1]},
-      {default, 0}]}.
+     [{guards, [fun is_atom/1]}
+     ]}.
 
 test_atom() ->
     each(atom, [ok, '', 'hey.hey', 'Hello My Friend', '+', a.b.c]),
@@ -106,8 +106,8 @@ test_atom() ->
 
 null() ->
     {type, null,
-     [{guards, [fun(null) -> true end]},
-      {default, null}]}.
+     [{guards, [fun(null) -> true end]}
+     ]}.
 
 test_null() ->
     each(null, [null, 'null']),
@@ -117,8 +117,8 @@ test_null() ->
 
 numeric() ->
     {type, numeric,
-     [{guards, [fun is_number/1]},
-      {default, 0}]}.
+     [{guards, [fun is_number/1]}
+     ]}.
 
 test_numeric() ->
     each(numeric, [0, 1.0, -99999999999999999999.0, 20, 2.3e-40, 32#JMETA]),
@@ -126,8 +126,8 @@ test_numeric() ->
 
 integer() ->
     {type, integer,
-     [{guards, [fun is_integer/1]},
-      {default, 0}]}.
+     [{guards, [fun is_integer/1]}
+     ]}.
 
 test_integer() ->
     each(integer, [0, 1, -20, 100000, 32#ELEPHANT, 999999999999999999999999]),
@@ -135,8 +135,8 @@ test_integer() ->
 
 bit() ->
     {type, bit,
-     [{guards, [fun(X) when is_integer(X) -> X >= 0 andalso X =< 1 end]},
-      {default, 0}]}.
+     [{guards, [fun(X) when is_integer(X) -> X >= 0 andalso X =< 1 end]}
+     ]}.
 
 test_bit() ->
     each(bit, [1, 0, 2#1, 2#0]),
@@ -144,8 +144,8 @@ test_bit() ->
 
 float() ->
     {type, float,
-     [{guards, [fun is_float/1]},
-      {default, 0.0}]}.
+     [{guards, [fun is_float/1]}
+     ]}.
 
 test_float() ->
     each(float, [0.0, 1.0, -2.3e-40]),
@@ -155,8 +155,8 @@ test_float() ->
 
 boolean() ->
     {type, boolean,
-     [{guards, [fun is_boolean/1]},
-      {default, false}]}.
+     [{guards, [fun is_boolean/1]}
+     ]}.
 
 test_boolean() ->
     each(boolean, [true, false, 'true', 'false']),
@@ -166,8 +166,8 @@ test_boolean() ->
 
 list() ->
     {type, list,
-     [{guards, [fun is_list/1]},
-      {default, []}]}.
+     [{guards, [fun is_list/1]}
+     ]}.
 
 test_list() ->
     each(list, [[], "", [1, 2, 3], "ABC", [[], [], []]]),
@@ -175,7 +175,8 @@ test_list() ->
 
 non_empty_list() ->
     {type, non_empty_list,
-     [{guards, [fun(X) when is_list(X) -> length(X) > 0 end]}]}.
+     [{guards, [fun(X) when is_list(X) -> length(X) > 0 end]}
+     ]}.
 
 test_non_empty_list() ->
     each(non_empty_list, ["ABC", [[], [], []], [1, 2, 3]]),
@@ -183,8 +184,8 @@ test_non_empty_list() ->
 
 set_keys() ->
     {type, set_keys,
-     [{guards, [fun(List) when is_list(List) -> lists:all(fun is_bitstring/1, List) end]},
-      {default, []}]}.
+     [{guards, [fun(List) when is_list(List) -> lists:all(fun is_bitstring/1, List) end]}
+     ]}.
 
 test_set_keys() ->
     each(set_keys, [[], [<<>>], [<<1, 2, 3>>, <<"jmeta">>]]),
@@ -192,8 +193,8 @@ test_set_keys() ->
 
 set_refs() ->
     {type, set_refs,
-     [{guards, [fun(List) when is_list(List) -> lists:all(fun is_integer/1, List) end]},
-      {default, []}]}.
+     [{guards, [fun(List) when is_list(List) -> lists:all(fun is_integer/1, List) end]}
+     ]}.
 
 test_set_refs() ->
     each(set_refs, [[], [1, 2, 3]]),
@@ -201,8 +202,8 @@ test_set_refs() ->
 
 list_of_frames() ->
     {type, list_of_frames,
-     [{guards, [fun(List) when is_list(List) -> lists:all(fun jframe:is_frame/1, List) end]},
-      {default, []}]}.
+     [{guards, [fun(List) when is_list(List) -> lists:all(fun jframe:is_frame/1, List) end]}
+     ]}.
 
 test_list_of_frames() ->
     A = [{id, 1}],
@@ -214,8 +215,8 @@ test_list_of_frames() ->
 
 tuple() ->
     {type, tuple,
-     [{guards, [fun is_tuple/1]},
-      {default, {}}]}.
+     [{guards, [fun is_tuple/1]}
+     ]}.
 
 test_tuple() ->
     each(tuple, [{}, {1, 2, 3}, {{a, 1}, {b, 2}}]),
@@ -225,8 +226,8 @@ test_tuple() ->
 
 string() ->
     {type, string,
-     [{guards, [fun is_bitstring/1]},
-      {default, <<>>}]}.
+     [{guards, [fun is_bitstring/1]}
+     ]}.
 
 test_string() ->
     each(string, [<<>>, <<"Hello">>, <<13, 10>>]),
@@ -234,8 +235,8 @@ test_string() ->
 
 string128() ->
     {type, string128,
-     [{guards, [fun(X) when is_bitstring(X) -> size(X) =< 128 end]},
-      {default, <<>>}]}.
+     [{guards, [fun(X) when is_bitstring(X) -> size(X) =< 128 end]}
+     ]}.
 
 test_string128() ->
     each(string128, [<<>>, binary:copy(<<$A>>, 128)]),
@@ -244,8 +245,8 @@ test_string128() ->
 % its same as string
 binary() ->
     {type, binary,
-     [{guards, [fun is_binary/1]},
-      {default, <<>>}]}.
+     [{guards, [fun is_binary/1]}
+     ]}.
 
 test_binary() ->
     each(string, [<<>>, <<"Hello">>, <<13, 10>>]),
@@ -255,8 +256,8 @@ test_binary() ->
 
 date_() ->
     {type, date,
-     [{guards, [fun calendar:valid_date/1]},
-      {default, fun date/0}]}.
+     [{guards, [fun calendar:valid_date/1]}
+     ]}.
 
 timea() ->
     {type, time.a,
@@ -264,19 +265,15 @@ timea() ->
                         H >= 0 andalso H < 24 andalso
                             M >= 0 andalso M < 60 andalso
                             S >= 0 andalso S < 60
-                end]},
-      {default, fun time/0}]}.
-
-default_timeb() ->
-    {H, M, S} = time(),
-    {H, M, float(S)}.
+                end]}
+     ]}.
 
 timeb() ->
     {type, time.b,
      [{guards, [fun({H, M, S}) when is_float(S) ->
                         true = jmeta:is({time.a, {H, M, trunc(S)}})
-                end]},
-      {default, fun default_timeb/0}]}.
+                end]}
+     ]}.
 
 timestamp_guard(TimeVersion) ->
     fun({Date, Time}) ->
@@ -286,16 +283,13 @@ timestamp_guard(TimeVersion) ->
 
 timestampa() ->
     {type, timestamp.a,
-     [{guards, [timestamp_guard(time.a)]},
-      {default, fun calendar:local_time/0}]}.
-
-default_timestampb() ->
-    {date(), default_timeb()}.
+     [{guards, [timestamp_guard(time.a)]}
+     ]}.
 
 timestampb() ->
     {type, timestamp.b,
-     [{guards, [timestamp_guard(time.b)]},
-      {default, fun default_timestampb/0}]}.
+     [{guards, [timestamp_guard(time.b)]}
+     ]}.
 
 timestamp_range_guard(TimestampVersion) ->
     fun([T1, T2] = Range) ->
@@ -305,13 +299,13 @@ timestamp_range_guard(TimestampVersion) ->
 
 timestamp_rangea() ->
     {type, timestamp_range.a,
-     [{guards, [timestamp_range_guard(timestamp.a)]},
-      {default, fun() -> T = calendar:local_time(), [T, T] end}]}.
+     [{guards, [timestamp_range_guard(timestamp.a)]}
+     ]}.
 
 timestamp_rangeb() ->
     {type, timestamp_range.b,
-     [{guards, [timestamp_range_guard(timestamp.b)]},
-      {default, fun() -> T = default_timestampb(), [T, T] end}]}.
+     [{guards, [timestamp_range_guard(timestamp.b)]}
+     ]}.
 
 test_datetime() ->
     GoodDateList =
@@ -379,8 +373,8 @@ test_datetime() ->
 
 frame() ->
     {type, frame,
-     [{guards, [fun jframe:is_frame/1]},
-      {default, []}]}.
+     [{guards, [fun jframe:is_frame/1]}
+     ]}.
 
 test_frame() ->
     A = [{id, 1}],
@@ -392,8 +386,8 @@ test_frame() ->
 new_frame() ->
     {type, new_frame,
      [{mixins, [frame]},
-      {guards, [fun jframe:is_new/1]},
-      {default, []}]}.
+      {guards, [fun jframe:is_new/1]}
+     ]}.
 
 test_new_frame() ->
     A = [],
@@ -405,8 +399,8 @@ test_new_frame() ->
 empty_frame() ->
     {type, empty_frame,
      [{mixins, [frame]},
-      {guards, [fun jframe:is_empty/1]},
-      {default, []}]}.
+      {guards, [fun jframe:is_empty/1]}
+     ]}.
 
 test_empty_frame() ->
     each(empty_frame, [[]]),

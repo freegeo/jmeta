@@ -36,10 +36,9 @@ parse({type, {Namespace, Name} = Key, Meta}) when is_atom(Namespace) andalso is_
     case jframe:new(Meta) of
         {error, wrong_frame} -> {error, wrong_meta_frame};
         _ ->
-            {Mixins, Guards, Default, Mode, Rest} =
+            {Mixins, Guards, Mode, Rest} =
                 jframe:take([{mixins, []},
                              {guards, []},
-                             default,
                              {mode, [{mixins, all},
                                      {guards, all}]}], Meta),
             case jframe:is_empty(Rest) of
@@ -68,7 +67,6 @@ parse({type, {Namespace, Name} = Key, Meta}) when is_atom(Namespace) andalso is_
                                                             #type{name=Key,
                                                                   mixins=jtils:ulist(StdMixins),
                                                                   guards=Guards,
-                                                                  default = Default,
                                                                   mode=#tmode{mixins=MixinsMode,
                                                                               guards=GuardsMode}}
                                                     end
@@ -144,11 +142,10 @@ parse_field({Name, Meta}) when is_atom(Name) ->
     case jframe:new(Meta) of
         {error, wrong_frame} -> {error, field_wrong_frame};
         _ ->
-            {Is, ListOf, Guards, Default, Optional, Rest} =
+            {Is, ListOf, Guards, Optional, Rest} =
                 jframe:take([{is, []},
                              {list_of, []},
                              {guards, []},
-                             default,
                              {optional, false}], Meta),
             case jframe:is_empty(Rest) of
                 false -> {error, field_contains_wrong_keys};
@@ -162,7 +159,6 @@ parse_field({Name, Meta}) when is_atom(Name) ->
                                     #field{name=Name,
                                            class=Class,
                                            guards=Guards,
-                                           default=Default,
                                            optional=Optional}
                             end
                     end
@@ -209,16 +205,13 @@ test_type() ->
     T1 = #type{name={std, int},
                mixins=[{std, number}],
                guards=[],
-               default=undefined,
                mode=#tmode{guards=all,
                            mixins=all}} = parse({type, int, [{mixins, [number, number]}]}),
-    T2 = T1#type{default=0},
-    T2 = parse({type, int, [{mixins, [number]}, {default, 0}]}),
-    T3 = T2#type{mode=T2#type.mode#tmode{guards=any}},
-    T3 = parse({type, int, [{mixins, [number]}, {default, 0}, {mode, [{guards, any}]}]}),
+    T2 = T1#type{mode=T1#type.mode#tmode{guards=any}},
+    T2 = parse({type, int, [{mixins, [number]}, {mode, [{guards, any}]}]}),
     IsInteger = fun is_integer/1,
-    T4 = T3#type{guards=[IsInteger]},
-    T4 = parse({type, int, [{mixins, [number]}, {guards, [IsInteger]}, {default, 0}, {mode, [{guards, any}]}]}).
+    T3 = T2#type{guards=[IsInteger]},
+    T3 = parse({type, int, [{mixins, [number]}, {guards, [IsInteger]}, {mode, [{guards, any}]}]}).
 
 test_frame() ->
     % TODO parse_field and parse (frame) tests
