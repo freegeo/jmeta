@@ -1,5 +1,6 @@
 %% Author: Said
 %% Created: 20.02.2013
+%% Published under MIT license.
 %% Description: TODO: Add description to jmeta_cache
 -module(jmeta_cache).
 
@@ -15,9 +16,6 @@
 %% Exported Functions
 %%
 
-% test
--export([test/0]).
-
 % external api
 -export([for/1, reset/0]).
 
@@ -27,10 +25,6 @@
 %%
 %% API Functions
 %%
-
-test() ->
-    % TODO
-    jmeta_test:done().
 
 for(Scenario) ->
     case get(?KEY) of

@@ -1,9 +1,7 @@
-%%% -------------------------------------------------------------------
-%%% Author  : Said
-%%% Description :
-%%%
-%%% Created : 18.02.2013
-%%% -------------------------------------------------------------------
+%% Author: Said
+%% Created: 18.02.2013
+%% Published under MIT license.
+%% Description: TODO: Add description to jmeta_namespace
 -module(jmeta_namespace).
 
 -behaviour(gen_server).

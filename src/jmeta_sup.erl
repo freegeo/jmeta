@@ -1,9 +1,7 @@
-%%% -------------------------------------------------------------------
-%%% Author  : Said
-%%% Description :
-%%%
-%%% Created : 11.02.2013
-%%% -------------------------------------------------------------------
+%% Author: Said
+%% Created: 11.02.2013
+%% Published under MIT license.
+%% Description: TODO: Add description to jmeta_sup
 -module(jmeta_sup).
 
 -behaviour(supervisor).

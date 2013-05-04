@@ -1,5 +1,6 @@
 %% Author: Said
 %% Created: 09.02.2013
+%% Published under MIT license.
 %% Description: TODO: Add description to jmeta_library
 -module(jmeta_library).
 

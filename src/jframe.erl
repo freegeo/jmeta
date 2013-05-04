@@ -1,5 +1,6 @@
 %% Author: Said
 %% Created: 06.02.2013
+%% Published under MIT license.
 %% Description: TODO: Add description to jframe
 -module(jframe).
 
@@ -26,7 +27,9 @@
          is_frame/1, is_new/1, is_empty/1,
          is_key_identical/2,
          % compare & sort
-         compare/3, sort/2]).
+         compare/3, sort/2,
+         % diff
+         diff/2]).
 
 %%
 %% API Functions
@@ -39,6 +42,7 @@ test() ->
     test_transform(),
     test_base(),
     test_compare_and_sort(),
+    test_diff(),
     jmeta_test:done().
 
 new() ->
@@ -150,6 +154,38 @@ compare(FrameA, FrameB, [{Field, Method}|CompareFrame]) ->
 sort(CompareFrame, ListOfFrames) ->
     lists:sort(fun(A, B) -> compare(A, B, CompareFrame) end, ListOfFrames).
 
+% diff
+
+diff(Previous, Next) ->
+    P = Previous -- Next, N = Next -- Previous,
+    PKeys = keys(P),
+    Diff =
+        fun(Key, Acc) ->
+                Result =
+                    case has(Key, N) of
+                        false -> removed;
+                        true ->
+                            PV = find(Key, P), NV = find(Key, N),
+                            case is_frame(PV) andalso is_frame(NV) of
+                                false ->
+                                    case PV =:= NV of
+                                        true -> equal;
+                                        false -> non_equal
+                                    end;
+                                true ->
+                                    case diff(PV, NV) of
+                                        [] -> equal;
+                                        R -> R
+                                    end
+                            end
+                    end,
+                case Result =:= equal of
+                    true -> [Acc];
+                    false -> [{Key, Result}|Acc]
+                end
+        end,
+    lists:foldl(Diff, [{K, added} || K <- keys(N) -- PKeys], PKeys).
+
 %%
 %% Local Functions
 %%
@@ -233,3 +269,12 @@ test_compare_and_sort() ->
     FD = [{a, 2}, {b, 1}],
     FE = [{a, 4}, {b, 6}],
     [FE, FB, FA, FD, FC] = sort([{a, '>'}, {b, '<'}], [FA, FB, FC, FD, FE]).
+
+test_diff() ->
+    [] = diff([], []),
+    [] = diff([{a, 1}], [{a, 1}]),
+    [{a, non_equal}] = diff([{a, 1}], [{a, 2}]),
+    [{b, [{e, removed}, {d, non_equal}]},
+     {a, removed},
+     {a1, added}] = diff([{a, 1}, {b, [{c, 1}, {d, 2}, {e, 3}]}],
+                        [{a1, 1}, {b, [{c, 1}, {d, 3}]}]).

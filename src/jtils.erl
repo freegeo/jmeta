@@ -1,5 +1,6 @@
 %% Author: Said
 %% Created: 06.02.2013
+%% Published under MIT license.
 %% Description: TODO: Add description to jtils
 -module(jtils).
 
@@ -24,7 +25,8 @@
          % misc
          random_list/2,
          random_token/1,
-         jtoken/0]).
+         jtoken/0,
+         shuffle/1]).
 
 %%
 %% API Functions
@@ -60,6 +62,9 @@ random_token(Lenght) ->
 jtoken() ->
     random_token(18).
 
+shuffle(List) ->
+    [X || {_, X} <- lists:sort([{random:uniform(), N} || N <- List])].
+
 %%
 %% Local Functions
 %%
@@ -82,4 +87,8 @@ test_misc() ->
     [[], [], []] = random_list(3, [[]]),
     "" = random_token(0),
     10 = length(random_token(10)),
-    18 = length(jtoken()).
+    T1 = jtoken(),
+    18 = length(T1),
+    T2 = shuffle(T1),
+    18 = length(T2),
+    T1 =/= T2.
