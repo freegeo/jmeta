@@ -180,7 +180,7 @@ diff(Previous, Next) ->
                             end
                     end,
                 case Result =:= equal of
-                    true -> [Acc];
+                    true -> Acc;
                     false -> [{Key, Result}|Acc]
                 end
         end,
