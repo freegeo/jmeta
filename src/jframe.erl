@@ -1,7 +1,8 @@
 %% Author: Said
+%% Mailto: said.dk@gmail.com
 %% Created: 06.02.2013
 %% Published under MIT license.
-%% Description: TODO: Add description to jframe
+%% Description: provides methods to create and transform frames.
 -module(jframe).
 
 %%

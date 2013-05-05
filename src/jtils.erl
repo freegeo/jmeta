@@ -1,7 +1,8 @@
 %% Author: Said
+%% Mailto: said.dk@gmail.com
 %% Created: 06.02.2013
 %% Published under MIT license.
-%% Description: TODO: Add description to jtils
+%% Description: provides some useful methods. ;)
 -module(jtils).
 
 %%
@@ -91,4 +92,5 @@ test_misc() ->
     18 = length(T1),
     T2 = shuffle(T1),
     18 = length(T2),
+    % At some day this test can blow up my leg. But... you know.
     T1 =/= T2.

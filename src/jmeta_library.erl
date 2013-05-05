@@ -1,7 +1,8 @@
 %% Author: Said
+%% Mailto: said.dk@gmail.com
 %% Created: 09.02.2013
 %% Published under MIT license.
-%% Description: TODO: Add description to jmeta_library
+%% Description: provides standard types and frames for jmeta.  
 -module(jmeta_library).
 
 %%

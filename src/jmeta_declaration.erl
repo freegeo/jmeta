@@ -1,7 +1,7 @@
 %% Author: Said
+%% Mailto: said.dk@gmail.com
 %% Created: 08.02.2013
 %% Published under MIT license.
-%% Description: TODO: Add description to jmeta_declaration
 -module(jmeta_declaration).
 
 %%

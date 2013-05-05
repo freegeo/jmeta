@@ -1,7 +1,7 @@
 %% Author: Said
+%% Mailto: said.dk@gmail.com
 %% Created: 14.03.2013
 %% Published under MIT license.
-%% Description: TODO: Add description to jmeta_exception
 -module(jmeta_exception).
 
 %%

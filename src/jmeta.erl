@@ -1,7 +1,10 @@
 %% Author: Said
+%% Mailto: said.dk@gmail.com
 %% Created: 11.02.2013
 %% Published under MIT license.
-%% Description: TODO: Add description to jmeta
+%% Description: provides main API for jmeta.
+%% Using this module you can install new types or frames and
+%% check your raw data via single API.  
 -module(jmeta).
 
 %%
