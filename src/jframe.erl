@@ -121,7 +121,7 @@ has(Key, Frame) ->
     lists:keymember(Key, 1, Frame).
 
 is_frame(Frame) when is_list(Frame) ->
-    lists:all(fun({Key, _}) when is_atom(Key) -> true; (_) -> false end, Frame) andalso
+    lists:all(fun({Key, _}) -> is_atom(Key) end, Frame) andalso
         jtils:is_list_elements_unique(keys(Frame));
 is_frame(_) -> false.
 
@@ -278,4 +278,6 @@ test_diff() ->
     [{b, [{e, removed}, {d, non_equal}]},
      {a, removed},
      {a1, added}] = diff([{a, 1}, {b, [{c, 1}, {d, 2}, {e, 3}]}],
-                        [{a1, 1}, {b, [{c, 1}, {d, 3}]}]).
+                        [{a1, 1}, {b, [{c, 1}, {d, 3}]}]),
+    [] = diff([{a, 1}, {b, [{c, 1}, {d, 2}]}],
+              [{a, 1}, {b, [{c, 1}, {d, 2}]}]).

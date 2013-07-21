@@ -4,7 +4,7 @@
 %% Published under MIT license.
 %% Description: provides main API for jmeta.
 %% Using this module you can install new types or frames and
-%% check your raw data via single API.  
+%% check your raw data via unified API.  
 -module(jmeta).
 
 %%

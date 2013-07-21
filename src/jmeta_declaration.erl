@@ -2,6 +2,8 @@
 %% Mailto: said.dk@gmail.com
 %% Created: 08.02.2013
 %% Published under MIT license.
+%% Description: provides some API for parse and analyze jmeta types/frames definitions.
+%% Can be useful if you want implement some extensions based on jmeta.
 -module(jmeta_declaration).
 
 %%
@@ -18,7 +20,7 @@
 -export([test/0]).
 
 % api
--export([parse/1,
+-export([parse/1, unparse/1,
          namespace/1, name/1, key/1, kind/1]).
 
 %%
@@ -115,6 +117,9 @@ parse({frame, {Namespace, Name} = Key, Meta}) when is_atom(Namespace) andalso is
             end
     end;
 parse(_) -> {error, wrong_meta_format}.
+
+unparse(1) ->
+    ok.
 
 namespace(#type{name={Namespace, _}}) -> Namespace;
 namespace(#frame{name={Namespace, _}}) -> Namespace;

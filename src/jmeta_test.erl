@@ -111,7 +111,7 @@ integration_test() ->
     % frames
     true = jmeta:is({base, []}),
     true = jmeta:is({base, [{id, 1}]}),
-    {error, {extra_keys, [name]}} = jmeta:is({base, [{name, <<>>}]}),
+    {error, [{not_a, {std, base}}, {extra_keys, [name]}]} = jmeta:is({base, [{name, <<>>}]}),
     Arrival = 
         {frame, ?WMS(arrival),
          [{extend, [base]},
@@ -140,9 +140,13 @@ integration_test() ->
     A2 = jframe:store([{nr, <<"123">>},
                        {warehouse_id, 1},
                        {status, 5},
+                       {extra1, some_data}, % complex extra keys test
+                       {extra2, some_data},
                        {items, []}], A1),
-    {error, [_, {violated, [status]}]} = jmeta:is({?WMS(arrival), A2}),
-    A3 = jframe:store({status, 2}, A2),
+    {error, [_,
+             {violated, [status]},
+             {extra_keys, [extra1, extra2]}]} = jmeta:is({?WMS(arrival), A2}),
+    A3 = jframe:delete([extra1, extra2], jframe:store({status, 2}, A2)),
     true = jmeta:is({?WMS(arrival), A3}),
     AI1 = jframe:new([{id, 1},
                       {product_id, 2},

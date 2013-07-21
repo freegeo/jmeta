@@ -87,13 +87,20 @@ is_frame(Key, RawData) ->
         true ->
             Fields = jmeta_cache:extended_fields(Key),
             {Violated, Rest} = lists:foldl(fun process_field/2, {[], RawData}, Fields),
-            case Violated of
-                [] ->
-                    case Rest of
-                        [] -> true;
-                        _ -> {error, {extra_keys, jframe:keys(Rest)}}
-                    end;
-                _ -> {error, [{not_a, Key}, {violated, Violated}]}
+            Result =
+                [X ||
+                 X <- [case Violated of
+                           [] -> skip;
+                           _ -> {violated, Violated}
+                       end,
+                       case Rest of
+                           [] -> skip;
+                           _ -> {extra_keys, jframe:keys(Rest)}
+                       end],
+                 X =/= skip],
+            case Result of
+                [] -> true;
+                _ -> {error, [{not_a, Key}|Result]}
             end
     end.
 
