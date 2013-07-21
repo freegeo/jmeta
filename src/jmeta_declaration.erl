@@ -118,6 +118,7 @@ parse({frame, {Namespace, Name} = Key, Meta}) when is_atom(Namespace) andalso is
     end;
 parse(_) -> {error, wrong_meta_format}.
 
+% FIXME still not implemented
 unparse(1) ->
     ok.
 
