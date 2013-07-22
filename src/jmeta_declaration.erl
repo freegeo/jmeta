@@ -29,8 +29,9 @@
 
 test() ->
     test_parse_behaviour(),
-    test_type(),
-    test_frame(),
+    test_parse_type(),
+    test_parse_frame(),
+    test_unparse(),
     test_misc(),
     jmeta_test:done().
 
@@ -118,9 +119,18 @@ parse({frame, {Namespace, Name} = Key, Meta}) when is_atom(Namespace) andalso is
     end;
 parse(_) -> {error, wrong_meta_format}.
 
-% FIXME still not implemented
-unparse(1) ->
-    ok.
+unparse(#type{name=Name, mixins=Mixins, guards=Guards, mode=#tmode{mixins=MMixins, guards=MGuards}}) ->
+    {type, Name,
+     [{mixins, Mixins},
+      {guards, Guards},
+      {mode, [{mixins, MMixins},
+              {guards, MGuards}]}]};
+unparse(#frame{name=Name, extend=Extend, fields=Fields}) ->
+    {frame, Name,
+     [{extend, Extend},
+      {fields, [{FieldName, [Class, {guards, Guards}, {optional, Optional}]} ||
+                #field{name=FieldName, class=Class, guards=Guards, optional=Optional} <- Fields ]}]};
+unparse(_) -> {error, wrong_unparse_format}.
 
 namespace(#type{name={Namespace, _}}) -> Namespace;
 namespace(#frame{name={Namespace, _}}) -> Namespace;
@@ -198,7 +208,7 @@ test_parse_behaviour() ->
     {error, wrong_meta_format} = parse({type, 1, 1}),
     {error, wrong_meta_format} = parse({frame, 1, 1}).
 
-test_type() ->
+test_parse_type() ->
     {error, wrong_meta_frame} = parse({type, int, 1}),
     {error, meta_contains_wrong_keys} = parse({type, int, [{a, 1}, {b, 2}, {c, 3}]}),
     {error, meta_is_empty} = parse({type, int, []}),
@@ -220,9 +230,66 @@ test_type() ->
     T3 = T2#type{guards=[IsInteger]},
     T3 = parse({type, int, [{mixins, [number]}, {guards, [IsInteger]}, {mode, [{guards, any}]}]}).
 
-test_frame() ->
+test_parse_frame() ->
     % TODO parse_field and parse (frame) tests
     ok.
 
+test_unparse() ->
+    % common behaviour
+    {error, wrong_unparse_format} = unparse(1),
+    % type
+    IsInteger = fun is_integer/1,
+    T1 = {type, test,
+          [{guards, [IsInteger]}
+          ]},
+    T1P = parse(T1),
+    T1U = unparse(T1P),
+    true = T1 =/= T1U,
+    T1U = unparse(parse(T1U)),
+    {type, {std, test}, T1UMeta} = T1U,
+    {[], [IsInteger], [{mixins, all}, {guards, all}], []} = jframe:take([mixins, guards, mode], T1UMeta),
+    % frame
+    More4 = fun(X) -> X > 4 end,
+    Less10 = fun(X) -> X < 10 end,
+    F1 = {frame, {ns, test},
+          [{extend, [base]},
+           {fields,
+            [{a, [{is, string}]},
+             {b, [{list_of, integer}, {optional, true}]},
+             {c, [{is, integer}, {guards, [More4, Less10]}]}
+            ]}
+          ]},
+    F1P = parse(F1),
+    F1U = unparse(F1P),
+    true = F1 =/= F1U,
+    F1U = unparse(parse(F1U)),
+    {frame, {ns, test}, F1UMeta} = F1U,
+    {[{std, base}], F1UFields, []} = jframe:take([extend, fields], F1UMeta),
+    {F1Ua, F1Ub, F1Uc, []} = jframe:take([a, b, c], F1UFields),
+    Inspect = fun(Field) -> jframe:take([is, list_of, guards, optional], Field) end,
+    {{std, string}, undefined, [], false, []} = Inspect(F1Ua),
+    {undefined, {std, integer}, [], true, []} = Inspect(F1Ub),
+    {{std, integer}, undefined, [More4, Less10], false, []} = Inspect(F1Uc).
+
 test_misc() ->
-    ok.
+    NS = std,
+    Name = random_name,
+    Key = {NS, Name},
+    T = #type{name=Key},
+    F = #frame{name=Key},
+    O = {ignored, Key, ignored},
+    NS = namespace(T),
+    NS = namespace(F),
+    NS = namespace(O),
+    {error, unknown_format} = namespace(ignored),
+    Name = name(T),
+    Name = name(F),
+    Name = name(O),
+    {error, unknown_format} = name(ignored),    
+    Key = key(T),
+    Key = key(F),
+    Key = key(O),
+    {error, unknown_format} = key(ignored),
+    type = kind(T),
+    frame = kind(F),
+    {error, unknown_record} = kind(O).

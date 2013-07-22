@@ -117,11 +117,11 @@ values(Frame) ->
     {_, Values} = lists:unzip(Frame),
     Values.
 
-has(Key, Frame) ->
-    lists:keymember(Key, 1, Frame).
+has(Keys, Frame) when is_list(Keys) -> lists:all(fun(Key) -> has(Key, Frame) end, Keys);
+has(Key, Frame) -> lists:keymember(Key, 1, Frame).
 
 is_frame(Frame) when is_list(Frame) ->
-    lists:all(fun({Key, _}) -> is_atom(Key) end, Frame) andalso
+    lists:all(fun({Key, _}) -> is_atom(Key); (_) -> false end, Frame) andalso
         jtils:is_list_elements_unique(keys(Frame));
 is_frame(_) -> false.
 
@@ -231,7 +231,9 @@ test_base() ->
     [id, name] = keys(F12),
     [1, <<>>] = values(F12),
     true = has(name, F12),
+    true = has([id, name], F12),
     false = has(age, F12),
+    false = has([id, name, age], F12),
     [true, true, false, false] = lists:map(fun is_frame/1, [new(), F12, F12 ++ F12, [1, 2, 3]]),
     false = is_key_identical(F10, F12),
     true = is_key_identical(F12, F12),
