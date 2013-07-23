@@ -95,7 +95,7 @@ parse({frame, {Namespace, Name} = Key, Meta}) when is_atom(Namespace) andalso is
                             case jframe:new(Fields) of
                                 {error, wrong_frame} -> {error, fields_wrong_frame};
                                 _ ->
-                                    ParseFields =
+                                    ParseField =
                                         fun({FieldName, _} = Field) ->
                                                 case parse_field(Field) of
                                                     {error, Reason} ->
@@ -104,7 +104,7 @@ parse({frame, {Namespace, Name} = Key, Meta}) when is_atom(Namespace) andalso is
                                                     R -> R
                                                 end
                                         end,
-                                    ParsedFields = lists:map(ParseFields, Fields),
+                                    ParsedFields = lists:map(ParseField, Fields),
                                     case [Description || {error, Description} <- ParsedFields] of
                                         [] ->
                                             StdExtend = [to_class_key(E) || E <- Extend],
@@ -129,7 +129,7 @@ unparse(#frame{name=Name, extend=Extend, fields=Fields}) ->
     {frame, Name,
      [{extend, Extend},
       {fields, [{FieldName, [Class, {guards, Guards}, {optional, Optional}]} ||
-                #field{name=FieldName, class=Class, guards=Guards, optional=Optional} <- Fields ]}]};
+                #field{name=FieldName, class=Class, guards=Guards, optional=Optional} <- Fields]}]};
 unparse(_) -> {error, wrong_unparse_format}.
 
 namespace(#type{name={Namespace, _}}) -> Namespace;
@@ -231,8 +231,39 @@ test_parse_type() ->
     T3 = parse({type, int, [{mixins, [number]}, {guards, [IsInteger]}, {mode, [{guards, any}]}]}).
 
 test_parse_frame() ->
-    % TODO parse_field and parse (frame) tests
-    ok.
+    {error, wrong_field_format} = parse_field(1),
+    {error, wrong_field_format} = parse_field({1, 1}),
+    {error, field_wrong_frame} = parse_field({correct, 1}),
+    {error, field_contains_wrong_keys} = parse_field({correct, [{extra, 1}]}),
+    {error, ambiguous_class} = parse_field({correct, []}),
+    {error, ambiguous_class} = parse_field({correct, [{is, int}, {list_of, int}]}),
+    {error, guards_should_be_unary_funs} = parse_field({correct, [{is, int}, {guards, [fun(1, 1) -> true end]}]}),
+    FI1D = {correct1, [{is, int}]},
+    FI1 = #field{name=correct1,
+                 class={is, {std, int}},
+                 guards=[],
+                 optional=false} = parse_field(FI1D),
+    More4 = fun(X) -> X > 4 end,
+    Less10 = fun(X) -> X < 10 end,
+    FI2D = {correct2, [{list_of, {ns, test}},
+                       {guards, [More4, Less10]},
+                       {optional, true}]},
+    FI2 = #field{name=correct2,
+                 class={list_of, {ns, test}},
+                 guards=[More4, Less10],
+                 optional=true} = parse_field(FI2D),
+    {error, wrong_meta_frame} = parse({frame, test, 1}),
+    {error, meta_contains_wrong_keys} = parse({frame, test, [{extra, 1}]}),
+    {error, extend_should_be_class_keys} = parse({frame, test, [{extend, [1]}]}),
+    {error, extend_should_be_class_keys} = parse({frame, test, [{extend, [a, {ns, b}, 1]}]}),
+    {error, fields_wrong_frame} = parse({frame, test, [{fields, [1, 2, 3]}]}),
+    {error, {incorrect_fields,
+             [[{field, a}, {reason, field_wrong_frame}],
+              [{field, b}, {reason, ambiguous_class}]]}} = parse({frame, test, [{fields, [{a, 1}, {b, []}]}]}),
+    #frame{name={std, test},
+           extend=[{std, a}, {ns, b}],
+           fields=[FI1, FI2],
+           extended_fields=undefined} = parse({frame, test, [{extend, [a, a, {ns, b}]}, {fields, [FI1D, FI2D]}]}).
 
 test_unparse() ->
     % common behaviour
