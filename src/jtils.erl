@@ -27,7 +27,8 @@
          random_list/2,
          random_token/1,
          jtoken/0,
-         shuffle/1]).
+         shuffle/1,
+         uid/0]).
 
 %%
 %% API Functions
@@ -65,6 +66,11 @@ jtoken() ->
 
 shuffle(List) ->
     [X || {_, X} <- lists:sort([{random:uniform(), N} || N <- List])].
+
+uid() ->
+    <<A:32, B:16, C:16, D:16, E:48>> = crypto:rand_bytes(16),
+    list_to_binary(io_lib:format(<<"~8.16.0b-~4.16.0b-4~3.16.0b-~4.16.0b-~12.16.0b">>,
+                                 [A, B, C band 16#0fff, D band 16#3fff bor 16#8000, E])).
 
 %%
 %% Local Functions
