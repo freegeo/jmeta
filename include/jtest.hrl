@@ -6,5 +6,5 @@
             ExceptionClass:ExceptionPattern -> ok
         end).
 
--define(N, jmeta.namespace.test). % test namespace
+-define(N, 'jmeta.namespace.test'). % test namespace
 -define(TN(X), {?N, X}).

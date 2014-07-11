@@ -103,7 +103,7 @@ atom() ->
      ]}.
 
 test_atom() ->
-    each(atom, [ok, '', 'hey.hey', 'Hello My Friend', '+', a.b.c]),
+    each(atom, [ok, '', 'hey.hey', 'Hello My Friend', '+', 'a.b.c']),
     each_is_not(atom, [<<>>, ""]).
 
 null() ->
@@ -262,7 +262,7 @@ date_() ->
      ]}.
 
 timea() ->
-    {type, time.a,
+    {type, 'time.a',
      [{guards, [fun({H, M, S}) when is_integer(H) andalso is_integer(M) andalso is_integer(S) ->
                         H >= 0 andalso H < 24 andalso
                             M >= 0 andalso M < 60 andalso
@@ -271,9 +271,9 @@ timea() ->
      ]}.
 
 timeb() ->
-    {type, time.b,
+    {type, 'time.b',
      [{guards, [fun({H, M, S}) when is_float(S) ->
-                        true = jmeta:is({time.a, {H, M, trunc(S)}})
+                        true = jmeta:is({'time.a', {H, M, trunc(S)}})
                 end]}
      ]}.
 
@@ -284,13 +284,13 @@ timestamp_guard(TimeVersion) ->
     end.
 
 timestampa() ->
-    {type, timestamp.a,
-     [{guards, [timestamp_guard(time.a)]}
+    {type, 'timestamp.a',
+     [{guards, [timestamp_guard('time.a')]}
      ]}.
 
 timestampb() ->
-    {type, timestamp.b,
-     [{guards, [timestamp_guard(time.b)]}
+    {type, 'timestamp.b',
+     [{guards, [timestamp_guard('time.b')]}
      ]}.
 
 timestamp_range_guard(TimestampVersion) ->
@@ -300,13 +300,13 @@ timestamp_range_guard(TimestampVersion) ->
     end.
 
 timestamp_rangea() ->
-    {type, timestamp_range.a,
-     [{guards, [timestamp_range_guard(timestamp.a)]}
+    {type, 'timestamp_range.a',
+     [{guards, [timestamp_range_guard('timestamp.a')]}
      ]}.
 
 timestamp_rangeb() ->
-    {type, timestamp_range.b,
-     [{guards, [timestamp_range_guard(timestamp.b)]}
+    {type, 'timestamp_range.b',
+     [{guards, [timestamp_range_guard('timestamp.b')]}
      ]}.
 
 test_datetime() ->
@@ -328,7 +328,7 @@ test_datetime() ->
          {0, 0, 0},
          {23, 59, 59},
          {9, 48, 21}],
-    each(time.a, GoodTimeAList),
+    each('time.a', GoodTimeAList),
     BadTimeAList =
         [{0, 0, -1},
          {0, 0, 60},
@@ -336,40 +336,40 @@ test_datetime() ->
          {0, 60, 0},
          {-1, 0, 0},
          {24, 0, 0}],
-    each_is_not(time.a, BadTimeAList),
+    each_is_not('time.a', BadTimeAList),
     TimeAToTimeB = fun({H, M, S}) -> {H, M, float(S)} end,
     GoodTimeBList = lists:map(TimeAToTimeB, GoodTimeAList),
-    each(time.b, GoodTimeBList),
+    each('time.b', GoodTimeBList),
     BadTimeBList = lists:map(TimeAToTimeB, BadTimeAList),
-    each_is_not(time.b, BadTimeBList),
+    each_is_not('time.b', BadTimeBList),
     GoodTimestampAList = [{D, T} || D <- GoodDateList, T <- GoodTimeAList],
-    each(timestamp.a, [calendar:local_time()|GoodTimestampAList]),
+    each('timestamp.a', [calendar:local_time()|GoodTimestampAList]),
     BadTimestampAList =
         [{D, T} || D <- GoodDateList, T <- BadTimeAList] ++
             [{D, T} || D <- BadDateList, T <- GoodTimeAList],
-    each_is_not(timestamp.a, BadTimestampAList),
+    each_is_not('timestamp.a', BadTimestampAList),
     GoodTimestampBList = [{D, T} || D <- GoodDateList, T <- GoodTimeBList],
-    each(timestamp.b, GoodTimestampBList),
+    each('timestamp.b', GoodTimestampBList),
     BadTimestampBList =
         [{D, T} || D <- GoodDateList, T <- BadTimeBList] ++
             [{D, T} || D <- BadDateList, T <- GoodTimeBList],
-    each_is_not(timestamp.b, BadTimestampBList),
+    each_is_not('timestamp.b', BadTimestampBList),
     GoodTimeStampA1 = {date(), {0, 0, 0}},
     GoodTimeStampA2 = {date(), {1, 0, 0}},
     GoodTimestampRangeAList =
         [[GoodTimeStampA1, GoodTimeStampA2]] ++ [[T, T] || T <- GoodTimestampAList],
-    each(timestamp_range.a, GoodTimestampRangeAList),
+    each('timestamp_range.a', GoodTimestampRangeAList),
     BadTimestampRangeAList =
         [[GoodTimeStampA2, GoodTimeStampA1]] ++ [[T, T] || T <- BadTimestampAList],
-    each_is_not(timestamp_range.a, BadTimestampRangeAList),
+    each_is_not('timestamp_range.a', BadTimestampRangeAList),
     GoodTimeStampB1 = {date(), {0, 0, 0.0}},
     GoodTimeStampB2 = {date(), {1, 0, 0.0}},
     GoodTimestampRangeBList =
         [[GoodTimeStampB1, GoodTimeStampB2]] ++ [[T, T] || T <- GoodTimestampBList],
-    each(timestamp_range.b, GoodTimestampRangeBList),
+    each('timestamp_range.b', GoodTimestampRangeBList),
     BadTimestampRangeBList =
         [[GoodTimeStampB2, GoodTimeStampB1]] ++ [[T, T] || T <- BadTimestampBList],
-    each_is_not(timestamp_range.b, BadTimestampRangeBList).
+    each_is_not('timestamp_range.b', BadTimestampRangeBList).
 
 % frame
 
@@ -380,7 +380,7 @@ frame() ->
 
 test_frame() ->
     A = [{id, 1}],
-    B = [{id, 2}, {a.b.c, <<>>}],
+    B = [{id, 2}, {'a.b.c', <<>>}],
     C = [{<<"a">>, 1}],
     each(frame, [[], A, B]),
     each_is_not(frame, [{}, A ++ B, C]).

@@ -10,7 +10,7 @@
 
 -include("jtest.hrl").
 
--define(KEY, jmeta.exception).
+-define(KEY, 'jmeta.exception').
 
 %%
 %% Exported Functions

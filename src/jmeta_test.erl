@@ -10,8 +10,8 @@
 %%
 
 -define(DONE_KEY, {ok, done}).
--define(N(X), {freegeo.jmeta.test, X}).
--define(WMS(X), {freegeo.jmeta.wms, X}).
+-define(N(X), {'freegeo.jmeta.test', X}).
+-define(WMS(X), {'freegeo.jmeta.wms', X}).
 
 %%
 %% Exported Functions
@@ -56,29 +56,29 @@ integration_test() ->
     DateISO8601a = <<"20130228">>, % YYYYMMDD
     DateISO8601b = <<"2013-02-28">>, % YYYY-MM-DD
     ISO8601a =
-        {type, ?N(iso8601.a),
+        {type, ?N('iso8601.a'),
          [{guards, [fun(<<Y:(4*8)/bitstring, M:(2*8)/bitstring, D:(2*8)/bitstring>>) ->
                             Date = list_to_tuple([list_to_integer(bitstring_to_list(X)) || X <- [Y, M, D]]),
                             jmeta:is({date, Date})
                     end]}
          ]},
     ISO8601b =
-        {type, ?N(iso8601.b),
+        {type, ?N('iso8601.b'),
          [{guards, [fun(<<Y:(4*8)/bitstring, "-", M:(2*8)/bitstring, "-", D:(2*8)/bitstring>>) ->
-                            jmeta:is({?N(iso8601.a), <<Y/bitstring, M/bitstring, D/bitstring>>})
+                            jmeta:is({?N('iso8601.a'), <<Y/bitstring, M/bitstring, D/bitstring>>})
                     end]}
          ]},
     ISO8601 =
         {type, ?N(iso8601),
-         [{mixins, [?N(iso8601.a), ?N(iso8601.b)]},
+         [{mixins, [?N('iso8601.a'), ?N('iso8601.b')]},
           {mode, [{mixins, any}]}
          ]},
     lists:foreach(fun jmeta:add/1, [ISO8601a, ISO8601b, ISO8601]),
-    true = jmeta:is({?N(iso8601.a), DateISO8601a}),
-    {error, {not_a, ?N(iso8601.a)}} = jmeta:is({?N(iso8601.a), DateISO8601b}),
-    false = true =:= jmeta:is({?N(iso8601.a), <<"20130229">>}), % right format, wrong date
-    true = jmeta:is({?N(iso8601.b), DateISO8601b}),
-    false = true =:= jmeta:is({?N(iso8601.b), DateISO8601a}),
+    true = jmeta:is({?N('iso8601.a'), DateISO8601a}),
+    {error, {not_a, ?N('iso8601.a')}} = jmeta:is({?N('iso8601.a'), DateISO8601b}),
+    false = true =:= jmeta:is({?N('iso8601.a'), <<"20130229">>}), % right format, wrong date
+    true = jmeta:is({?N('iso8601.b'), DateISO8601b}),
+    false = true =:= jmeta:is({?N('iso8601.b'), DateISO8601a}),
     % iso8601 is a variant type and accept a and b format
     true = jmeta:is({?N(iso8601), DateISO8601a}),
     true = jmeta:is({?N(iso8601), DateISO8601b}),
@@ -116,7 +116,7 @@ integration_test() ->
         {frame, ?WMS(arrival),
          [{extend, [base]},
           {fields,
-           [{datetime, [{is, timestamp.b}, {optional, true}]},
+           [{datetime, [{is, 'timestamp.b'}, {optional, true}]},
             {nr, [{is, string128}]},
             {warehouse_id, [{is, integer}]},
             {status, [{is, integer}, {guards, [fun(X) -> lists:member(X, [1, 2, 3]) end]}]},
@@ -129,7 +129,7 @@ integration_test() ->
           {fields,
            [{arrival_id, [{is, integer}, {optional, true}]},
             {product_id, [{is, integer}, {optional, true}]},
-            {expire, [{is, timestamp.b}]},
+            {expire, [{is, 'timestamp.b'}]},
             {count, [{is, integer}]}
            ]}
          ]},
@@ -157,31 +157,31 @@ integration_test() ->
     A5 = jframe:update({items, fun([Item]) -> lists:duplicate(10, Item) end}, A4),
     true = jmeta:is({?WMS(arrival), A5}),
     % override fields via extend
-    jmeta:add({frame, ?WMS(arrival.a),
+    jmeta:add({frame, ?WMS('arrival.a'),
                [{extend, [?WMS(arrival)]},
                 {fields,
                  [{nr, [{is, integer}]}
                  ]}
                ]}),
-    {error, [_, {violated, [nr]}]} = jmeta:is({?WMS(arrival.a), A5}),
+    {error, [_, {violated, [nr]}]} = jmeta:is({?WMS('arrival.a'), A5}),
     A6 = jframe:store({nr, 123}, A5),
-    true = jmeta:is({?WMS(arrival.a), A6}),
+    true = jmeta:is({?WMS('arrival.a'), A6}),
     % invalidation
     Scenario =
         fun() ->
-                jmeta:add({frame, ?N(test.cache),
+                jmeta:add({frame, ?N('test.cache'),
                            [{extend, [base]}
                            ]}),
                 TC1 = [{id, 1}],
-                true = jmeta:is({?N(test.cache), TC1}),
-                jmeta:add({frame, ?N(test.cache),
+                true = jmeta:is({?N('test.cache'), TC1}),
+                jmeta:add({frame, ?N('test.cache'),
                            [{fields,
                              [{id, [{is, string128}]}
                              ]}
                            ]}),
-                true = jmeta:is({?N(test.cache), TC1}),
+                true = jmeta:is({?N('test.cache'), TC1}),
                 jmeta:cache_reset(),
-                {error,[_, {violated, [id]}]} = jmeta:is({?N(test.cache), TC1})
+                {error,[_, {violated, [id]}]} = jmeta:is({?N('test.cache'), TC1})
         end,
     jmeta:cache_for(Scenario),
     cleanup(),
@@ -189,13 +189,13 @@ integration_test() ->
 
 cleanup() ->
     Types =
-        [?N(iso8601.a),
-         ?N(iso8601.b),
+        [?N('iso8601.a'),
+         ?N('iso8601.b'),
          ?N(iso8601),
          ?N(foreign_key),
          ?N(str),
          ?WMS(arrival),
          ?WMS(arrival_item),
-         ?WMS(arrival.a),
-         ?N(test.cache)],
+         ?WMS('arrival.a'),
+         ?N('test.cache')],
     lists:foreach(fun jmeta:delete/1, Types).

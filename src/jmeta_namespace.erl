@@ -178,7 +178,7 @@ test_api() ->
     0 = delete(TK), false = exists(?N).
 
 test_behaviour() ->
-    {error, {wrong_namespace, some.strange.namespace}} =
-        ?MODULE:get({some.strange.namespace, some.undefined.meta}),
-    {error, {{std, some.undefined.meta}, is_not_defined}} =
-        ?MODULE:get({std, some.undefined.meta}).
+    {error, {wrong_namespace, 'some.strange.namespace'}} =
+        ?MODULE:get({'some.strange.namespace', 'some.undefined.meta'}),
+    {error, {{std, 'some.undefined.meta'}, is_not_defined}} =
+        ?MODULE:get({std, 'some.undefined.meta'}).
