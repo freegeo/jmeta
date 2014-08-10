@@ -39,6 +39,8 @@ is_({{_, _} = Key, RawData}) ->
 is_({Name, RawData}) when is_atom(Name) -> is_({{std, Name}, RawData});
 is_(_) -> {error, wrong_check_format}.
 
+list_of_({{list_of, Key}, RawData}) ->
+    list_of(fun(Data) -> list_of_({Key, Data}) end, RawData);
 list_of_({{_, _} = Key, RawData}) ->
     initial(Key,
             fun(type) -> list_of_type(Key, RawData);
@@ -50,7 +52,7 @@ list_of_(_) -> {error, wrong_list_check_format}.
 initial(Key, Selector) ->
     Selector(jmeta_declaration:kind(jmeta_cache:type_or_frame(Key))).
 
-list_of(Checker, ListOfRawData) ->
+list_of(Checker, ListOfRawData) when is_list(ListOfRawData) ->
     Check =
         fun(RawData, {Result, Prev}) ->
                 Current = Prev + 1,
@@ -63,7 +65,8 @@ list_of(Checker, ListOfRawData) ->
     case Result of
         [] -> true;
         _ -> Result
-    end.
+    end;
+list_of(_, _) -> {error, data_is_not_a_list}.
 
 list_of_type(Key, ListOfRawData) ->
     list_of(fun(RawData) -> is_type(Key, RawData) end, ListOfRawData).

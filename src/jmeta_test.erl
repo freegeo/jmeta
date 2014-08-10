@@ -108,6 +108,15 @@ integration_test() ->
          [_, {pos, 4}],
          [_, {pos, 2}]] = jmeta:list_of({integer, TestList}),
     [{7}, [5], "4", <<"2">>] = [lists:nth(jframe:find(pos, X), TestList) || X <- ListOfResult],
+    % nested list of
+    true = jmeta:list_of({{list_of, {list_of, integer}}, []}),
+    true = jmeta:list_of({{list_of, {list_of, integer}}, [[], [], []]}),
+    true = jmeta:list_of({{list_of, {list_of, integer}}, [[[1, 2], [3, 4]], [[]], []]}),
+    [[{error, data_is_not_a_list}, {pos, 3}],
+     [[[{error, {not_a, {std, integer}}}, {pos, 4}],
+       [_, {pos, 3}],
+       [_, {pos, 2}]], {pos, 2}],
+     [[[_, {pos, 3}]], {pos, 1}]] = jmeta:list_of({{list_of, integer}, [[1, 2, []], [1, a, b, c], abc]}),
     % frames
     true = jmeta:is({base, []}),
     true = jmeta:is({base, [{id, 1}]}),
