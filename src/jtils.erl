@@ -28,6 +28,7 @@
          random_token/1,
          jtoken/0,
          shuffle/1,
+         hex/1,
          uid/0]).
 
 %%
@@ -67,14 +68,25 @@ jtoken() ->
 shuffle(List) ->
     [X || {_, X} <- lists:sort([{random:uniform(), N} || N <- List])].
 
+hex(Bin) ->
+   <<<<if V < 10 -> $0 + V; true -> $W + V end>> || <<V:4>> <= Bin>>.
+
 uid() ->
     <<A:32, B:16, C:16, D:16, E:48>> = crypto:rand_bytes(16),
-    list_to_binary(io_lib:format(<<"~8.16.0b-~4.16.0b-4~3.16.0b-~4.16.0b-~12.16.0b">>,
-                                 [A, B, C band 16#0fff, D band 16#3fff bor 16#8000, E])).
+    <<(pad_right(integer_to_binary(A, 16), $0, 8))/binary, "-",
+      (pad_right(integer_to_binary(B, 16), $0, 4))/binary, "-",
+      (integer_to_binary(C band 16#0fff bor 16#4000, 16))/binary, "-",
+      (integer_to_binary(D band 16#3fff bor 16#8000, 16))/binary, "-",
+      (pad_right(integer_to_binary(E, 16), $0, 12))/binary>>.
 
 %%
 %% Local Functions
 %%
+
+% unsafe and very simple, only for internal purposes
+pad_right(Bitstring, _, Number) when byte_size(Bitstring) >= Number -> Bitstring;
+pad_right(Bitstring, Char, Number) ->
+    <<(binary:copy(<<Char>>, Number - byte_size(Bitstring)))/binary, Bitstring/binary>>.
 
 test_list() ->
     A = [],
@@ -98,5 +110,7 @@ test_misc() ->
     18 = length(T1),
     T2 = shuffle(T1),
     18 = length(T2),
-    % At some day this test can blow up my leg. But... you know.
-    T1 =/= T2.
+    true = T1 =/= T2, % not quite safe, but the possible problem might occur very rarely
+    <<"616263646566">> = hex(<<"abcdef">>),
+    <<"414243f3010d096f41">> = hex(<<"ABC", 243, 1, 13, 9, 111, $A>>),
+    0 = length([X || X <- [uid() || _ <- lists:seq(1, 25000)], byte_size(X) =/= 36]).
