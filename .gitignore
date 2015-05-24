@@ -1,3 +1,6 @@
 /.settings
 .project
 /ebin
+/.rebar
+/.idea
+jmeta.iml
