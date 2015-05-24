@@ -73,10 +73,10 @@ hex(Bin) ->
 
 uid() ->
     <<A:32, B:16, C:16, D:16, E:48>> = crypto:rand_bytes(16),
-    <<(pad_right(integer_to_binary(A, 16), $0, 8))/binary, "-",
-      (pad_right(integer_to_binary(B, 16), $0, 4))/binary, "-",
-      (integer_to_binary(C band 16#0fff bor 16#4000, 16))/binary, "-",
-      (integer_to_binary(D band 16#3fff bor 16#8000, 16))/binary, "-",
+    <<(pad_right(integer_to_binary(A, 16), $0, 8))/binary, $-,
+      (pad_right(integer_to_binary(B, 16), $0, 4))/binary, $-,
+      (integer_to_binary(C band 16#0fff bor 16#4000, 16))/binary, $-,
+      (integer_to_binary(D band 16#3fff bor 16#8000, 16))/binary, $-,
       (pad_right(integer_to_binary(E, 16), $0, 12))/binary>>.
 
 %%
