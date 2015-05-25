@@ -1,38 +1,28 @@
-%% Author: Said
-%% Mailto: said.dk@gmail.com
-%% Created: 11.02.2013
-%% Published under MIT license.
+%%% coding: UTF-8
+%%%-------------------------------------------------------------------
+%%% @author Konstantin Duman <said.dk@gmail.com>
+%%% @copyright (C) 2015, FreeGeo
+%%% Published under MIT license.
+%%%
+%%% @doc
+%%% Supervisor specific boilerplate.
+%%% @end
+%%%-------------------------------------------------------------------
+
 -module(jmeta_sup).
 
 -behaviour(supervisor).
-%% --------------------------------------------------------------------
-%% Include files
-%% --------------------------------------------------------------------
 
 -include("jtils.hrl").
 
-%% --------------------------------------------------------------------
-%% External exports
-%% --------------------------------------------------------------------
 -export([start_link/0]).
 
-%% --------------------------------------------------------------------
-%% Internal exports
-%% --------------------------------------------------------------------
 -export([init/1]).
 
-%% --------------------------------------------------------------------
-%% Records
-%% --------------------------------------------------------------------
-
-%% ====================================================================
-%% External functions
-%% ====================================================================
-
 start_link() ->
-    Info = supervisor:start_link({local, ?MODULE}, ?MODULE, []),
-    lists:foreach(fun jmeta_namespace:add/1, jmeta_library:std()),
-    Info.
+  Info = supervisor:start_link({local, ?MODULE}, ?MODULE, []),
+  lists:foreach(fun jmeta_namespace:add/1, jmeta_library:std()),
+  Info.
 
 %% ====================================================================
 %% Server functions
@@ -43,9 +33,7 @@ start_link() ->
 %%          ignore                          |
 %%          {error, Reason}
 %% --------------------------------------------------------------------
-init([]) ->
-    {ok, {{simple_one_for_one, 1, 1},
-          [?WORKER(jmeta_namespace)]}}.
+init([]) -> {ok, {{simple_one_for_one, 1, 1}, [?WORKER(jmeta_namespace)]}}.
 
 %% ====================================================================
 %% Internal functions
