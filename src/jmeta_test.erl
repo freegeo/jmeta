@@ -168,22 +168,21 @@ integration_test() ->
   A6 = jframe:store({nr, 123}, A5),
   true = jmeta:is({?WMS('arrival.a'), A6}),
   % invalidation
-  Scenario =
-    fun() ->
-      jmeta:add({frame, ?N('test.cache'),
-        [{extend, [base]}
-        ]}),
-      TC1 = [{id, 1}],
-      true = jmeta:is({?N('test.cache'), TC1}),
-      jmeta:add({frame, ?N('test.cache'),
-        [{fields,
-          [{id, [{is, string128}]}
-          ]}
-        ]}),
-      true = jmeta:is({?N('test.cache'), TC1}),
-      jmeta:cache_reset(),
-      {error, [_, {violated, [id]}]} = jmeta:is({?N('test.cache'), TC1})
-    end,
+  Scenario = fun() ->
+    jmeta:add({frame, ?N('test.cache'),
+      [{extend, [base]}
+      ]}),
+    TC1 = [{id, 1}],
+    true = jmeta:is({?N('test.cache'), TC1}),
+    jmeta:add({frame, ?N('test.cache'),
+      [{fields,
+        [{id, [{is, string128}]}
+        ]}
+      ]}),
+    true = jmeta:is({?N('test.cache'), TC1}),
+    jmeta:cache_reset(),
+    {error, [_, {violated, [id]}]} = jmeta:is({?N('test.cache'), TC1})
+  end,
   jmeta:cache_for(Scenario),
   cleanup(),
   {ok, complete}.
