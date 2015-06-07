@@ -11,11 +11,7 @@
 
 -module(jtils).
 
--include("jtest.hrl").
 -include("jtils.hrl").
-
-%% test
--export([test/0]).
 
 %% api
 -export([% list
@@ -28,12 +24,6 @@
   shuffle/1,
   hex/1,
   uid/0]).
-
-%% API Functions
-test() ->
-  test_list(),
-  test_misc(),
-  jmeta_test:done().
 
 %% list
 ulist([]) -> [];
@@ -72,30 +62,3 @@ uid() ->
 pad_right(Bitstring, _, Number) when byte_size(Bitstring) >= Number -> Bitstring;
 pad_right(Bitstring, Char, Number) ->
   <<(binary:copy(<<Char>>, Number - byte_size(Bitstring)))/binary, Bitstring/binary>>.
-
-test_list() ->
-  A = [],
-  B = [1, 2, 3],
-  C = [3, 2, 1],
-  D = [3, 2, 1, 1, 2, 3],
-  E = [[1, 2], [2, 1]],
-  [A, B, C, C, E] = lists:map(fun ulist/1, [A, B, C, D, E]),
-  [true, true, true, false, true] = lists:map(fun is_list_elements_unique/1, [A, B, C, D, E]).
-
-test_misc() ->
-  ?EXCEPTION(error, function_clause, random_list(-1, "ABC")),
-  ?EXCEPTION(error, function_clause, random_list(10, "")),
-  "" = random_list(0, ""),
-  "" = random_list(0, ?ALLOWED_CHARS),
-  "AAAAAAAAAA" = random_list(10, "A"),
-  [[], [], []] = random_list(3, [[]]),
-  "" = random_token(0),
-  10 = length(random_token(10)),
-  T1 = jtoken(),
-  18 = length(T1),
-  T2 = shuffle(T1),
-  18 = length(T2),
-  true = T1 =/= T2, % not quite safe, but the possible problem might occur very rarely
-  <<"616263646566">> = hex(<<"abcdef">>),
-  <<"414243f3010d096f41">> = hex(<<"ABC", 243, 1, 13, 9, 111, $A>>),
-  0 = length([X || X <- [uid() || _ <- lists:seq(1, 25000)], byte_size(X) =/= 36]).

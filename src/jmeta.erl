@@ -18,10 +18,7 @@
 -export([% setup
   add/1, delete/1, get/1,
   % meta api
-  is/1, list_of/1, cache_for/1, cache_reset/0,
-  % tests
-  test/0,
-  speed_test/0, speed_test/1, speed_test/2]).
+  is/1, list_of/1, cache_for/1, cache_reset/0]).
 
 %% API Functions
 start() -> application:start(?MODULE).
@@ -37,9 +34,3 @@ is(X) -> jmeta_check:is(X).
 list_of(X) -> jmeta_check:list_of(X).
 cache_for(Scenario) -> jmeta_cache:for(Scenario).
 cache_reset() -> jmeta_cache:reset().
-
-%% tests
-test() -> jmeta_test:run().
-speed_test() -> speed_test(1000).
-speed_test(Repeats) -> jmeta_speed_test:run(Repeats, true).
-speed_test(Repeats, UseCache) -> jmeta_speed_test:run(Repeats, UseCache).

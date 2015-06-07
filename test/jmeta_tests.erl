@@ -5,45 +5,17 @@
 %%% Published under MIT license.
 %%%
 %%% @doc
-%%% Provides test system for jetta. Obsolete.
+%%% Contains unit tests.
 %%% @end
 %%%-------------------------------------------------------------------
 
--module(jmeta_test).
+-module(jmeta_tests).
+-include_lib("eunit/include/eunit.hrl").
 
--define(DONE_KEY, {ok, done}).
 -define(N(X), {'freegeo.jmeta.test', X}).
 -define(WMS(X), {'freegeo.jmeta.wms', X}).
 
--export([run/0, done/0]).
-
-%% API Functions
-run() ->
-  Modules = [list_to_atom(filename:basename(Name, ".beam")) ||
-    Name <- filelib:wildcard([filename:dirname(code:which(?MODULE)), "/*.beam"])],
-  ModulesWithTest = [Module ||
-    Module <- Modules,
-    lists:member({test, 0}, Module:module_info(exports)),
-    Module =/= jmeta],
-  case [R || R <- [check(M) || M <- ModulesWithTest], R =/= ?DONE_KEY] of
-    [] -> integration_test();
-    Errors -> {error, Errors}
-  end.
-
-done() -> ?DONE_KEY.
-
-%%
-%% Local Functions
-%%
-
-check(M) ->
-  try
-    {ok, done} = M:test()
-  catch
-    _:Why -> [{module, M}, {reason, Why}, {stack, erlang:get_stacktrace()}]
-  end.
-
-integration_test() ->
+integration() ->
   % types and mixins
   DateISO8601a = <<"20130228">>, % YYYYMMDD
   DateISO8601b = <<"2013-02-28">>, % YYYY-MM-DD
@@ -91,7 +63,7 @@ integration_test() ->
     ]}),
   true = jmeta:is({?N(str), "jmeta"}),
   true = jmeta:is({?N(str), <<"jmeta">>}),
-  false = true =:= jmeta:is({?N(str), 32#jmeta}),
+  false = true =:= jmeta:is({?N(str), 32#JMETA}),
   % list of
   TestList = [2#01, <<"2">>, 3, "4", [5], 6, {7}],
   ListOfResult =
@@ -183,19 +155,10 @@ integration_test() ->
     jmeta:cache_reset(),
     {error, [_, {violated, [id]}]} = jmeta:is({?N('test.cache'), TC1})
   end,
-  jmeta:cache_for(Scenario),
-  cleanup(),
-  {ok, complete}.
+  jmeta:cache_for(Scenario).
 
-cleanup() ->
-  Types =
-    [?N('iso8601.a'),
-      ?N('iso8601.b'),
-      ?N(iso8601),
-      ?N(foreign_key),
-      ?N(str),
-      ?WMS(arrival),
-      ?WMS(arrival_item),
-      ?WMS('arrival.a'),
-      ?N('test.cache')],
-  lists:foreach(fun jmeta:delete/1, Types).
+integration_test_() ->
+  {setup,
+    fun jmeta:start/0,
+    fun(_) -> jmeta:stop() end,
+    ?_test(integration())}.
