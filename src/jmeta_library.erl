@@ -38,6 +38,7 @@ std() ->
     string(),
     string128(),
     binary(),
+    regex(),
     % datetime
     date_(),
     timea(),
@@ -139,10 +140,16 @@ string128() ->
     [{guards, [fun(X) when is_bitstring(X) -> size(X) =< 128 end]}
     ]}.
 
-%% its same as string
+%% the same as string
 binary() ->
   {type, binary,
     [{guards, [fun is_binary/1]}
+    ]}.
+
+regex() ->
+  {type, regex,
+    [{mixins, [string]},
+      {guards, [fun(X, Params) -> nomatch =/= re:run(X, jframe:find({re, <<"">>}, Params), [global]) end]}
     ]}.
 
 %% datetime

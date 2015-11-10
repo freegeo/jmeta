@@ -1,7 +1,7 @@
 {application, jmeta,
 [
     {description, "A new wave of duck typing for Erlang. Can be useful when you check received data."},
-    {vsn, "1.0.0"},
+    {vsn, "1.2.0"},
     {modules, [
         jframe,
         jmeta_app,
@@ -11,9 +11,7 @@
         jmeta_exception,
         jmeta_library,
         jmeta_namespace,
-        jmeta_speed_test,
         jmeta_sup,
-        jmeta_test,
         jmeta,
         jtils
     ]},

@@ -13,7 +13,9 @@
 -include_lib("eunit/include/eunit.hrl").
 
 -define(N(X), {'freegeo.jmeta.test', X}).
+-define(N(X, Params), {'freegeo.jmeta.test', X, Params}).
 -define(WMS(X), {'freegeo.jmeta.wms', X}).
+-define(WMS(X, Params), {'freegeo.jmeta.wms', X, Params}).
 
 integration() ->
   % types and mixins
@@ -39,7 +41,7 @@ integration() ->
       ]},
   lists:foreach(fun jmeta:add/1, [ISO8601a, ISO8601b, ISO8601]),
   true = jmeta:is({?N('iso8601.a'), DateISO8601a}),
-  {error, {not_a, ?N('iso8601.a')}} = jmeta:is({?N('iso8601.a'), DateISO8601b}),
+  {error, {not_a, ?N('iso8601.a', [])}} = jmeta:is({?N('iso8601.a'), DateISO8601b}),
   false = true =:= jmeta:is({?N('iso8601.a'), <<"20130229">>}), % right format, wrong date
   true = jmeta:is({?N('iso8601.b'), DateISO8601b}),
   false = true =:= jmeta:is({?N('iso8601.b'), DateISO8601a}),
@@ -67,24 +69,26 @@ integration() ->
   % list of
   TestList = [2#01, <<"2">>, 3, "4", [5], 6, {7}],
   ListOfResult =
-    [[{error, {not_a, {std, integer}}}, {pos, 7}],
-      [_, {pos, 5}],
+    [[{error, {not_a, {std, integer, []}}}, {pos, 2}],
       [_, {pos, 4}],
-      [_, {pos, 2}]] = jmeta:list_of({integer, TestList}),
-  [{7}, [5], "4", <<"2">>] = [lists:nth(jframe:find(pos, X), TestList) || X <- ListOfResult],
+      [_, {pos, 5}],
+      [_, {pos, 7}]] = jmeta:list_of({integer, TestList}),
+  [<<"2">>, "4", [5], {7}] = [lists:nth(jframe:find(pos, X), TestList) || X <- ListOfResult],
   % nested list of
   true = jmeta:list_of({{list_of, {list_of, integer}}, []}),
   true = jmeta:list_of({{list_of, {list_of, integer}}, [[], [], []]}),
   true = jmeta:list_of({{list_of, {list_of, integer}}, [[[1, 2], [3, 4]], [[]], []]}),
-  [[{error, data_is_not_a_list}, {pos, 3}],
-    [[[{error, {not_a, {std, integer}}}, {pos, 4}],
-      [_, {pos, 3}],
-      [_, {pos, 2}]], {pos, 2}],
-    [[[_, {pos, 3}]], {pos, 1}]] = jmeta:list_of({{list_of, integer}, [[1, 2, []], [1, a, b, c], abc]}),
+  [[[[{error, {not_a, {std, integer, []}}}, {pos, 3}]], {pos, 1}],
+    [[[_,{pos, 2}],
+      [_,{pos, 3}],
+      [_,{pos, 4}]], {pos, 2}],
+    [{error, data_is_not_a_list}, {pos, 3}]] = jmeta:list_of({{list_of, integer}, [[1, 2, []], [1, a, b, c], abc]}),
+  [1 ,2, 4, 5] = jmeta:pick({integer, [1, 2, b, integer, null, 4, 5, a, "6", <<"7">>]}),
+  [1, 2, null, 4, 5] = jmeta:pick({?N(foreign_key), [1, 2, b, integer, null, 4, 5, a, "6", <<"7">>]}),
   % frames
   true = jmeta:is({base, []}),
   true = jmeta:is({base, [{id, 1}]}),
-  {error, [{not_a, {std, base}}, {extra_keys, [name]}]} = jmeta:is({base, [{name, <<>>}]}),
+  {error, [{not_a, {std, base, []}}, {extra_keys, [name]}]} = jmeta:is({base, [{name, <<>>}]}),
   Arrival =
     {frame, ?WMS(arrival),
       [{extend, [base]},
@@ -108,8 +112,13 @@ integration() ->
       ]},
   lists:foreach(fun jmeta:add/1, [Arrival, ArrivalItem]),
   A1 = jframe:new(),
-  {error, [{not_a, ?WMS(arrival)},
-    {violated, [items, status, warehouse_id, nr]}]} = jmeta:is({?WMS(arrival), A1}),
+  {error, [{not_a, ?WMS(arrival, [])},
+    {violated, [
+      {nr, missed},
+      {warehouse_id, missed},
+      {status, missed},
+      {items, missed}
+    ]}]} = jmeta:is({?WMS(arrival), A1}),
   A2 = jframe:store([{nr, <<"123">>},
     {warehouse_id, 1},
     {status, 5},
@@ -117,7 +126,7 @@ integration() ->
     {extra2, some_data},
     {items, []}], A1),
   {error, [_,
-    {violated, [status]},
+    {violated, [{status, {{is, {std, integer, []}}, but_breaking_a_guard}}]},
     {extra_keys, [extra1, extra2]}]} = jmeta:is({?WMS(arrival), A2}),
   A3 = jframe:delete([extra1, extra2], jframe:store({status, 2}, A2)),
   true = jmeta:is({?WMS(arrival), A3}),
@@ -136,7 +145,7 @@ integration() ->
         [{nr, [{is, integer}]}
         ]}
     ]}),
-  {error, [_, {violated, [nr]}]} = jmeta:is({?WMS('arrival.a'), A5}),
+  {error, [_, {violated, [{nr, {not_a, {std, integer, []}}}]}]} = jmeta:is({?WMS('arrival.a'), A5}),
   A6 = jframe:store({nr, 123}, A5),
   true = jmeta:is({?WMS('arrival.a'), A6}),
   % invalidation
@@ -153,9 +162,115 @@ integration() ->
       ]}),
     true = jmeta:is({?N('test.cache'), TC1}),
     jmeta:cache_reset(),
-    {error, [_, {violated, [id]}]} = jmeta:is({?N('test.cache'), TC1})
+    {error, [_, {violated, [{id, {not_a, {std, string128, []}}}]}]} = jmeta:is({?N('test.cache'), TC1})
   end,
-  jmeta:cache_for(Scenario).
+  jmeta:cache_for(Scenario),
+  % pick and mixins tricks
+  jmeta:add({type, ?N(range1_7), [{guards, [fun(X) -> lists:member(X, lists:seq(1, 7)) end]}]}),
+  jmeta:add({type, ?N(range4_9), [{guards, [fun(X) -> lists:member(X, lists:seq(4, 9)) end]}]}),
+  jmeta:add({type, ?N(mix_1_7_and_4_9), [{mixins, [?N(range1_7), ?N(range4_9)]}, {mode, [{mixins, all}]}]}),
+  jmeta:add({type, ?N(mix_1_7_or_4_9), [{mixins, [?N(range1_7), ?N(range4_9)]}, {mode, [{mixins, any}]}]}),
+  Nums = lists:seq(-20, 20),
+  [1, 2, 3, 4, 5, 6, 7] = jmeta:pick({?N(range1_7), Nums}),
+  [4, 5, 6, 7, 8, 9] = jmeta:pick({?N(range4_9), Nums}),
+  [4, 5, 6, 7] = jmeta:pick({?N(mix_1_7_and_4_9), Nums}),
+  [1, 2, 3, 4, 5, 6, 7, 8, 9] = jmeta:pick({?N(mix_1_7_or_4_9), Nums}),
+  % just yet another complex test
+  Identifier =
+    {type, ?N(identifier),
+      [{mixins, [null, integer]},
+        {mode, [{mixins, any}]}
+      ]},
+  Entity =
+    {frame, ?N(entity),
+      [{extend, [base]},
+        {fields,
+          [{id, {is, ?N(identifier)}}
+          ]}
+      ]},
+  User =
+    {frame, ?N(user),
+      [{extend, [?N(entity)]},
+        {fields,
+          [{first_name, {is, string}},
+            {second_name, [{is, string}, {optional, true}]},
+            {nickname, [{is, string}, {optional, true}]},
+            {dob, [{is, ?N(iso8601)}, {optional, true}]},
+            {status, [{is, atom}, {guards, [fun(X) -> lists:member(X, [active, inactive]) end]}]},
+            {projects, {list_of, ?N(project)}}
+          ]}
+      ]},
+  Project =
+    {frame, ?N(project),
+      [{extend, [?N(entity)]},
+        {fields,
+          [{name, {is, string}},
+            {created, {is, ?N(iso8601)}},
+            {commits, [{is, integer}, {guards, [fun(X) -> X > 0 end]}]}
+          ]}
+      ]},
+  lists:foreach(fun jmeta:add/1, [Identifier, Entity, User, Project]),
+  Kostya =
+    [{first_name, <<"Kostya">>},
+      {second_name, duman},
+      {middle_name, <<"V">>},
+      {nickname, <<"Said">>},
+      {status, destructive},
+      {projects, [
+        [{name, jobcheck},
+          {created, <<"2012-01-09">>},
+          {commits, 276}],
+        [{id, null},
+          {name, sqlex},
+          {created, <<"Apr 29, 2013">>},
+          {commits, 0}],
+        [{id, 1},
+          {name, <<"jmeta">>},
+          {created, <<20130209>>},
+          {subscribers, 2}]
+      ]}],
+  % OK, here we are!
+  {error,
+    [{not_a, ?N(user, [])},
+      {violated, [
+        {id, missed},
+        {second_name, {not_a, {std, string, []}}},
+        {status, {{is, {std, atom, []}}, but_breaking_a_guard}},
+        {projects, [
+          [{error,
+            [{not_a, ?N(project, [])},
+              {violated, [
+                {id, missed},
+                {name, {not_a, {std, string, []}}}
+              ]}
+            ]},
+            {pos, 1}
+          ],
+          [{error,
+            [{not_a, ?N(project, [])},
+              {violated, [
+                {name, {not_a, {std, string, []}}},
+                {created, {not_a, ?N(iso8601, [])}},
+                {commits, {{is, {std, integer, []}}, but_breaking_a_guard}}
+              ]}
+            ]},
+            {pos, 2}
+          ],
+          [{error,
+            [{not_a, ?N(project, [])},
+              {violated, [
+                {created, {not_a, ?N(iso8601, [])}},
+                {commits, missed}
+              ]},
+              {extra_keys, [subscribers]}
+            ]},
+            {pos, 3}
+          ]
+        ]}
+      ]},
+      {extra_keys, [middle_name]}
+    ]
+  } = jmeta:is({?N(user), Kostya}).
 
 integration_test_() ->
   {setup,

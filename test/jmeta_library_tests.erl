@@ -26,11 +26,11 @@ null() ->
   each_is_not(null, ["null", <<"null">>, undefined, nil]).
 
 numeric() ->
-  each(numeric, [0, 1.0, -99999999999999999999.0, 20, 2.3e-40, 32#JMETA]),
+  each(numeric, [0, 1.0, -99999999999999999999.0, 20, 2.3e-40]), % 32#JMETA (thank you IntelliJ)
   each_is_not(numeric, [<<>>, {}, [], <<0>>]).
 
 integer() ->
-  each(integer, [0, 1, -20, 100000, 32#ELEPHANT, 999999999999999999999999]),
+  each(integer, [0, 1, -20, 100000, 999999999999999999999999]), % 32#ELEPHANT
   each_is_not(integer, [0.0, 1.0]).
 
 bit() ->
@@ -39,7 +39,7 @@ bit() ->
 
 float() ->
   each(float, [0.0, 1.0, -2.3e-40]),
-  each_is_not(float, [0, 1, 32#FLOAT]).
+  each_is_not(float, [0, 1, 500]). % 32#FLOAT
 
 boolean() ->
   each(boolean, [true, false, 'true', 'false']),
@@ -82,6 +82,11 @@ string128() ->
 binary() ->
   each(string, [<<>>, <<"Hello">>, <<13, 10>>]),
   each_is_not(string, [[], "", "Hello", [$j, $m, $e, $t, $a]]).
+
+regex() ->
+  Type = {regex, [{re, <<"(a+)*z">>}]},
+  each(Type, [<<"az">>, <<"aazz">>, <<"z">>, <<"za">>, <<"axz">>, <<"xaz">>]),
+  each_is_not(Type, [<<>>, <<"a">>, <<"bbb">>, <<"cde">>]).
 
 datetime() ->
   GoodDateList =
@@ -188,6 +193,7 @@ main_test_() ->
       ?_test(string()),
       ?_test(string128()),
       ?_test(binary()),
+      ?_test(regex()),
       ?_test(datetime()),
       ?_test(frame()),
       ?_test(new_frame()),

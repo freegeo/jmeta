@@ -18,7 +18,7 @@
 -export([parse/1, unparse/1, namespace/1, name/1, key/1, kind/1]).
 
 %% api internal
--export([parse_field/1]).
+-export([parse_field/1, wrap_guards/1]).
 
 %% API Functions
 parse({type, Name, Meta}) when is_atom(Name) -> parse({type, {std, Name}, Meta});
@@ -26,33 +26,37 @@ parse({type, {Namespace, Name} = Key, Meta}) when is_atom(Namespace) andalso is_
   case jframe:new(Meta) of
     {error, wrong_frame} -> {error, wrong_meta_frame};
     _ ->
-      {Mixins, Guards, Mode, Rest} = jframe:take([{mixins, []}, {guards, []},
-        {mode, [{mixins, all}, {guards, all}]}], Meta),
+      {Mixins, RawGuards, ParamsRaw, ModeRaw, Rest} = jframe:take([{mixins, []}, {guards, []},
+        {params, []}, {mode, [{mixins, all}, {guards, all}]}], Meta),
       case jframe:is_empty(Rest) of
         false -> {error, meta_contains_wrong_keys};
         true ->
-          case Mixins =:= [] andalso Guards =:= [] of
-            true -> {error, meta_is_empty};
-            false ->
-              case is_list_of_class_keys(Mixins) of
-                false -> {error, mixins_should_be_class_keys};
-                true ->
-                  case is_list_of_unary_funs(Guards) of
-                    false -> {error, guards_should_be_unary_funs};
+          case jframe:new(ParamsRaw) of
+            {error, wrong_frame} -> {error, params_wrong_frame};
+            Params ->
+              case Mixins =:= [] andalso RawGuards =:= [] andalso Params =:= [] of
+                true -> {error, meta_is_empty};
+                false ->
+                  case is_list_of_class_keys(Mixins) of
+                    false -> {error, mixins_should_be_class_keys};
                     true ->
-                      case jframe:new(Mode) of
-                        {error, wrong_frame} -> {error, mode_wrong_frame};
-                        _ ->
-                          {MixinsMode, GuardsMode} = jframe:find([{mixins, all}, {guards, all}], Mode),
-                          AllOrAny = fun(all) -> true; (any) -> true; (_) -> false end,
-                          case lists:all(AllOrAny, [MixinsMode, GuardsMode]) of
-                            false -> {error, mode_wrong_arguments};
-                            true ->
-                              StdMixins = [to_class_key(M) || M <- Mixins],
-                              #type{name = Key,
-                                mixins = jtils:ulist(StdMixins),
-                                guards = Guards,
-                                mode = #tmode{mixins = MixinsMode, guards = GuardsMode}}
+                      case wrap_guards(RawGuards) of
+                        {error, _} = E -> E;
+                        Guards ->
+                          case jframe:new(ModeRaw) of
+                            {error, wrong_frame} -> {error, mode_wrong_frame};
+                            Mode ->
+                              {MixinsMode, GuardsMode} = jframe:find([{mixins, all}, {guards, all}], Mode),
+                              AllOrAny = fun(all) -> true; (any) -> true; (_) -> false end,
+                              case lists:all(AllOrAny, [MixinsMode, GuardsMode]) of
+                                false -> {error, mode_wrong_arguments};
+                                true ->
+                                  #type{name = Key,
+                                    mixins = jtils:ulist([to_class_key(M) || M <- Mixins]),
+                                    guards = Guards,
+                                    params = Params,
+                                    mode = #tmode{mixins = MixinsMode, guards = GuardsMode}}
+                              end
                           end
                       end
                   end
@@ -96,12 +100,13 @@ parse({frame, {Namespace, Name} = Key, Meta}) when is_atom(Namespace) andalso is
   end;
 parse(_) -> {error, wrong_meta_format}.
 
-unparse(#type{name = Name, mixins = Mixins, guards = Guards, mode = #tmode{mixins = MMixins, guards = MGuards}}) ->
+unparse(#type{name = Name, mixins = Mixins, guards = Guards, params = Params,
+  mode = #tmode{mixins = MMixins, guards = MGuards}}) ->
   {type, Name,
     [{mixins, Mixins},
       {guards, Guards},
-      {mode, [{mixins, MMixins},
-        {guards, MGuards}]}]};
+      {params, Params},
+      {mode, [{mixins, MMixins}, {guards, MGuards}]}]};
 unparse(#frame{name = Name, extend = Extend, fields = Fields}) ->
   {frame, Name,
     [{extend, Extend},
@@ -128,11 +133,11 @@ kind(#type{}) -> type;
 kind(#frame{}) -> frame;
 kind(_) -> {error, unknown_record}.
 
-parse_field({Name, Meta}) when is_atom(Name) ->
-  case jframe:new(Meta) of
+parse_field({Name, MetaRaw}) when is_atom(Name) ->
+  case jframe:new(MetaRaw) of
     {error, wrong_frame} -> {error, field_wrong_frame};
-    _ ->
-      {Is, ListOf, Guards, Optional, Rest} = jframe:take([
+    Meta ->
+      {Is, ListOf, RawGuards, Optional, Rest} = jframe:take([
         {is, []},
         {list_of, []},
         {guards, []},
@@ -143,9 +148,9 @@ parse_field({Name, Meta}) when is_atom(Name) ->
           case parse_class(Is, ListOf) of
             {error, _} = E -> E;
             Class ->
-              case is_list_of_unary_funs(Guards) of
-                false -> {error, guards_should_be_unary_funs};
-                true ->
+              case wrap_guards(RawGuards) of
+                {error, _} = E -> E;
+                Guards ->
                   #field{name = Name,
                     class = Class,
                     guards = Guards,
@@ -160,18 +165,59 @@ parse_field(_) -> {error, wrong_field_format}.
 %% Local Functions
 %%
 
-parse_class(Is, []) when is_atom(Is) -> parse_class({std, Is}, []);
-parse_class({Namespace, Name} = Is, []) when is_atom(Namespace) andalso is_atom(Name) -> {is, Is};
-parse_class([], ListOf) when is_atom(ListOf) -> parse_class([], {std, ListOf});
-parse_class([], {Namespace, Name} = ListOf) when is_atom(Namespace) andalso is_atom(Name) -> {list_of, ListOf};
+parse_class(Is, []) ->
+  case parse_class_name(Is) of
+    {error, _} = E -> E;
+    X -> {is, X}
+  end;
+parse_class([], ListOf) ->
+  case parse_class_name(ListOf) of
+    {error, _} = E -> E;
+    X -> {list_of, X}
+  end;
 parse_class(_, _) -> {error, ambiguous_class}.
 
+parse_class_name(Name) when is_atom(Name) -> parse_class_name({std, Name, []});
+parse_class_name({Namespace, Name}) when is_atom(Namespace) andalso is_atom(Name) ->
+  parse_class_name({Namespace, Name, []});
+parse_class_name({Namespace, Name, RawParams}) when is_atom(Namespace) andalso is_atom(Name) ->
+  case jframe:new(RawParams) of
+    {error, _} -> {error, ambiguous_class};
+    Params -> {Namespace, Name, Params}
+  end;
+parse_class_name(_) -> {error, ambiguous_class}.
+
+is_class_key({Namespace, Name, {Parameter, _}}) when is_atom(Namespace) andalso is_atom(Name)
+  andalso is_atom(Parameter) -> true;
+is_class_key({Namespace, Name, Params}) when is_atom(Namespace) andalso is_atom(Name) andalso is_list(Params) ->
+  jframe:is_frame(Params);
 is_class_key({Namespace, Name}) when is_atom(Namespace) andalso is_atom(Name) -> true;
 is_class_key(Name) when is_atom(Name) -> true;
 is_class_key(_) -> false.
 
 is_list_of_class_keys(List) -> lists:all(fun is_class_key/1, List).
-is_list_of_unary_funs(List) -> lists:all(fun(Fun) -> {arity, 1} =:= erlang:fun_info(Fun, arity) end, List).
 
-to_class_key({_, _} = X) -> X;
-to_class_key(Name) -> {std, Name}.
+to_class_key({Namespace, Name}) when is_atom(Namespace) andalso is_atom(Name) -> {Namespace, Name, []};
+to_class_key({Name, Params}) -> {std, Name, Params};
+to_class_key(Name) ->
+  case Name of
+    {_, _, _} -> Name;
+    _ -> {std, Name, []}
+  end.
+
+wrap_guards(RawGuards) when is_list(RawGuards) ->
+  case lists:all(fun erlang:is_function/1, RawGuards) of
+    false -> {error, guards_should_be_a_list_of_funs};
+    true ->
+      Guards =
+        [case erlang:fun_info(Guard, arity) of
+           {arity, 1} -> fun(Value, _) -> Guard(Value) end; % leads us to the known issue with unparse!
+           {arity, 2} -> Guard;
+           {arity, _} -> {error, guards_should_be_unary_or_binary_funs}
+         end || Guard <- RawGuards],
+      case [E || {error, _} = E <- Guards] of
+        [] -> Guards;
+        [E|_] -> E
+      end
+  end;
+wrap_guards(_) -> {error, incorrect_guards_format}.

@@ -15,6 +15,7 @@
 new_test() ->
   [] = jframe:new(),
   {error, wrong_frame} = jframe:new([{id, 1}, {id, 2}]),
+  [{id, 1}] = jframe:new({id, 1}),
   [{a, 1}, {b, 2}, {c, 3}] = jframe:new(jframe:new([a, b, c], [1, 2, 3])).
 
 transform_test() ->

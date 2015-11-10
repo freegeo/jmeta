@@ -16,7 +16,7 @@
 -include("jmeta.hrl").
 -include("jtils.hrl").
 
--export([start_link/1, add/1, delete/1, get/1]).
+-export([start_link/1, add/1, delete/1, get/1, definitions/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 start_link(Namespace) -> gen_server:start_link({local, ?NAMESPACE(Namespace)}, ?MODULE, [], []).
@@ -37,9 +37,13 @@ delete({Namespace, _} = Key) ->
   case call(Namespace, {delete, Key}) of
     0 -> release(Namespace), 0;
     Count -> Count
-  end.
+  end;
+delete(Name) when is_atom(Name) -> delete({std, Name}).
 
-get({Namespace, _} = Key) -> call(Namespace, {get, Key}).
+get({Namespace, _} = Key) -> call(Namespace, {get, Key});
+get(Name) when is_atom(Name) -> jmeta_namespace:get({std, Name}).
+
+definitions(Namespace) -> call(Namespace, definitions).
 
 %% --------------------------------------------------------------------
 %% Function: init/1
@@ -72,6 +76,8 @@ handle_call({add, {Key, Record}}, _, State) ->
 handle_call({delete, Key}, _, State) ->
   New = dict:erase(Key, State),
   {reply, dict:size(New), New};
+handle_call(definitions, _, State) ->
+  {reply, [X || {_, X} <- dict:to_list(State)], State};
 handle_call(_, _, State) -> {noreply, State}.
 
 %% --------------------------------------------------------------------

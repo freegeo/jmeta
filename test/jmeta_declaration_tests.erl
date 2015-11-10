@@ -28,18 +28,16 @@ parse_type_test() ->
   {error, meta_is_empty} = jmeta_declaration:parse({type, int, [{guards, []}]}),
   {error, meta_is_empty} = jmeta_declaration:parse({type, int, [{mixins, []}, {guards, []}]}),
   {error, mixins_should_be_class_keys} = jmeta_declaration:parse({type, int, [{mixins, [1, 2, 3]}]}),
-  {error, guards_should_be_unary_funs} = jmeta_declaration:parse({type, int, [{guards, [fun(1, 1) -> true end]}]}),
+  {error, guards_should_be_unary_or_binary_funs} =
+    jmeta_declaration:parse({type, int, [{guards, [fun(_, _, _) -> true end]}]}),
   {error, mode_wrong_arguments} =
     jmeta_declaration:parse({type, int, [{guards, [fun is_integer/1]}, {mode, [{mixins, abc}]}]}),
   {error, mode_wrong_arguments} =
     jmeta_declaration:parse({type, int, [{guards, [fun is_integer/1]}, {mode, [{guards, abc}]}]}),
-  T1 = #type{name = {std, int}, mixins = [{std, number}], guards = [], mode = #tmode{guards = all, mixins = all}} =
-    jmeta_declaration:parse({type, int, [{mixins, [number, number]}]}),
+  T1 = #type{name = {std, int}, mixins = [{std, number, []}], guards = [], params = [],
+    mode = #tmode{guards = all, mixins = all}} = jmeta_declaration:parse({type, int, [{mixins, [number, number]}]}),
   T2 = T1#type{mode = T1#type.mode#tmode{guards = any}},
-  T2 = jmeta_declaration:parse({type, int, [{mixins, [number]}, {mode, [{guards, any}]}]}),
-  IsInteger = fun is_integer/1,
-  T3 = T2#type{guards = [IsInteger]},
-  T3 = jmeta_declaration:parse({type, int, [{mixins, [number]}, {guards, [IsInteger]}, {mode, [{guards, any}]}]}).
+  T2 = jmeta_declaration:parse({type, int, [{mixins, [number]}, {mode, [{guards, any}]}]}).
 
 parse_frame_test() ->
   {error, wrong_field_format} = jmeta_declaration:parse_field(1),
@@ -48,15 +46,15 @@ parse_frame_test() ->
   {error, field_contains_wrong_keys} = jmeta_declaration:parse_field({correct, [{extra, 1}]}),
   {error, ambiguous_class} = jmeta_declaration:parse_field({correct, []}),
   {error, ambiguous_class} = jmeta_declaration:parse_field({correct, [{is, int}, {list_of, int}]}),
-  {error, guards_should_be_unary_funs} =
-    jmeta_declaration:parse_field({correct, [{is, int}, {guards, [fun(1, 1) -> true end]}]}),
+  {error, guards_should_be_unary_or_binary_funs} =
+    jmeta_declaration:parse_field({correct, [{is, int}, {guards, [fun(_, _, _) -> true end]}]}),
   FI1D = {correct1, [{is, int}]},
-  FI1 = #field{name = correct1, class = {is, {std, int}}, guards = [], optional = false} =
+  FI1 = #field{name = correct1, class = {is, {std, int, []}}, guards = [], optional = false} =
     jmeta_declaration:parse_field(FI1D),
-  More4 = fun(X) -> X > 4 end,
-  Less10 = fun(X) -> X < 10 end,
+  More4 = fun(X, _) -> X > 4 end, % should be binary functions, otherwise we're getting a problem with wrapped guards
+  Less10 = fun(X, _) -> X < 10 end,
   FI2D = {correct2, [{list_of, {ns, test}}, {guards, [More4, Less10]}, {optional, true}]},
-  FI2 = #field{name = correct2, class = {list_of, {ns, test}}, guards = [More4, Less10], optional = true} =
+  FI2 = #field{name = correct2, class = {list_of, {ns, test, []}}, guards = [More4, Less10], optional = true} =
     jmeta_declaration:parse_field(FI2D),
   {error, wrong_meta_frame} = jmeta_declaration:parse({frame, test, 1}),
   {error, meta_contains_wrong_keys} = jmeta_declaration:parse({frame, test, [{extra, 1}]}),
@@ -65,24 +63,24 @@ parse_frame_test() ->
   {error, fields_wrong_frame} = jmeta_declaration:parse({frame, test, [{fields, [1, 2, 3]}]}),
   {error, {incorrect_fields, [[{field, a}, {reason, field_wrong_frame}], [{field, b}, {reason, ambiguous_class}]]}} =
     jmeta_declaration:parse({frame, test, [{fields, [{a, 1}, {b, []}]}]}),
-  #frame{name = {std, test}, extend = [{std, a}, {ns, b}], fields = [FI1, FI2], extended_fields = undefined} =
+  #frame{name = {std, test}, extend = [{std, a, []}, {ns, b, []}], fields = [FI1, FI2], extended_fields = undefined} =
     jmeta_declaration:parse({frame, test, [{extend, [a, a, {ns, b}]}, {fields, [FI1D, FI2D]}]}).
 
 unparse_test() ->
   % common behaviour
   {error, wrong_unparse_format} = jmeta_declaration:unparse(1),
   % type
-  IsInteger = fun is_integer/1,
+  IsInteger = fun(X, _) -> is_integer(X) end, % that's just a trick for the test, usually you use a simple unary func.
   T1 = {type, test, [{guards, [IsInteger]}]},
   T1P = jmeta_declaration:parse(T1),
   T1U = jmeta_declaration:unparse(T1P),
   true = T1 =/= T1U,
   T1U = jmeta_declaration:unparse(jmeta_declaration:parse(T1U)),
   {type, {std, test}, T1UMeta} = T1U,
-  {[], [IsInteger], [{mixins, all}, {guards, all}], []} = jframe:take([mixins, guards, mode], T1UMeta),
+  {[], [IsInteger], [], [{mixins, all}, {guards, all}], []} = jframe:take([mixins, guards, params, mode], T1UMeta),
   % frame
-  More4 = fun(X) -> X > 4 end,
-  Less10 = fun(X) -> X < 10 end,
+  More4 = fun(X, _) -> X > 4 end, % Yep... wrapped guards again
+  Less10 = fun(X, _) -> X < 10 end,
   F1 = {frame, {ns, test},
     [{extend, [base]},
       {fields,
@@ -96,12 +94,12 @@ unparse_test() ->
   true = F1 =/= F1U,
   F1U = jmeta_declaration:unparse(jmeta_declaration:parse(F1U)),
   {frame, {ns, test}, F1UMeta} = F1U,
-  {[{std, base}], F1UFields, []} = jframe:take([extend, fields], F1UMeta),
+  {[{std, base, []}], F1UFields, []} = jframe:take([extend, fields], F1UMeta),
   {F1Ua, F1Ub, F1Uc, []} = jframe:take([a, b, c], F1UFields),
   Inspect = fun(Field) -> jframe:take([is, list_of, guards, optional], Field) end,
-  {{std, string}, undefined, [], false, []} = Inspect(F1Ua),
-  {undefined, {std, integer}, [], true, []} = Inspect(F1Ub),
-  {{std, integer}, undefined, [More4, Less10], false, []} = Inspect(F1Uc).
+  {{std, string, []}, undefined, [], false, []} = Inspect(F1Ua),
+  {undefined, {std, integer, []}, [], true, []} = Inspect(F1Ub),
+  {{std, integer, []}, undefined, [More4, Less10], false, []} = Inspect(F1Uc).
 
 misc_test() ->
   NS = std,
