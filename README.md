@@ -64,7 +64,8 @@ syntax on it, **jmeta** creates a new namespace once it appears.
 OK, let's try again.
 
 ```erlang
-1> jmeta:add({type, {'thedicegame.myproject.local', d6_result}, [{guards, [fun(V) -> V >= 1 andalso V =< 6 end]}]}).
+1> jmeta:add({type, {'thedicegame.myproject.local', d6_result},
+                     [{guards, [fun(V) -> V >= 1 andalso V =< 6 end]}]}).
 1
 2> jmeta:is({d6_result, 3}).
 ** exception error: {'jmeta.exception', {{std, d6_result}, is_not_defined}}
