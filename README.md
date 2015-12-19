@@ -40,7 +40,7 @@ true
 ### The Type System ###
 
 So, how do I add my own primitive types? Simple enough!
-The idea is if anything satisfies constrains successfully then this is what you are looking for.
+The idea is if anything satisfies constraints successfully then this is what you are looking for.
 
 Let's define a new type!
 
@@ -84,8 +84,8 @@ Such huge namespaces are pretty inconvenient in the use, so we can hide them out
 You can define a type with parameters. You can also specify default values.
 Using parameters you can tweak a type directly during the validation stage.
 
-A note: I'm gonna use std in the following examples in order to simplify them,
-but that's definitely a wrong way to do so. In real projects you always use namespaces.
+*A note: I'm gonna use std in the following examples in order to simplify them,
+but that's definitely a wrong way to do so. In real projects you always use namespaces.*
 
 ```erlang
 1> jmeta:add({type, dice,
@@ -255,11 +255,9 @@ on that feature. You either apply all of the guards at once or you either use no
 OK, let's see how it works!
 
 ```erlang
-1> jmeta:start().
+1> real_project_setup:setup().
 ok
-2> real_project_setup:setup().
-ok
-3> jmeta:is({student, [{id, empty}, {first_name, <<"Kostya">>}, {grade, 13}, {axe, 27},
+2> jmeta:is({student, [{id, empty}, {first_name, <<"Kostya">>}, {grade, 13}, {axe, 27},
             {courses, [<<"math">>, english, 42]}]}).
 {error, [{not_a, {std, student, []}},
          {violated, [{id, {not_a, {std, identifier, []}}},
@@ -269,7 +267,7 @@ ok
                      {courses, [[{error, {not_a, {std, atom, []}}}, {pos, 1}],
                                 [{error, {not_a, {std, atom, []}}}, {pos, 3}]]}]},
          {extra_keys, [axe]}]}
-4> jmeta:is({student, [{id, 1}, {first_name, <<"John">>}, {last_name, <<"Doe">>}, {grade, 5}, {age, 13},
+3> jmeta:is({student, [{id, 1}, {first_name, <<"John">>}, {last_name, <<"Doe">>}, {grade, 5}, {age, 13},
             {courses, [math, english, physics]}]}).
 true
 ```
@@ -277,6 +275,6 @@ true
 Pretty cool, huh? :)
 
 Well, this is probably it. Inspect the code, inspect the tests, play with the features and feel free to contact me
-whenever you need it!
+whenever you need it.
 
 Have fun!
