@@ -165,11 +165,17 @@ integration() ->
     {error, [_, {violated, [{id, {not_a, {std, string128, []}}}]}]} = jmeta:is({?N('test.cache'), TC1})
   end,
   jmeta:cache_for(Scenario),
-  % pick and mixins tricks
-  jmeta:add({type, ?N(range1_7), [{guards, [fun(X) -> lists:member(X, lists:seq(1, 7)) end]}]}),
-  jmeta:add({type, ?N(range4_9), [{guards, [fun(X) -> lists:member(X, lists:seq(4, 9)) end]}]}),
-  jmeta:add({type, ?N(mix_1_7_and_4_9), [{mixins, [?N(range1_7), ?N(range4_9)]}, {mode, [{mixins, all}]}]}),
-  jmeta:add({type, ?N(mix_1_7_or_4_9), [{mixins, [?N(range1_7), ?N(range4_9)]}, {mode, [{mixins, any}]}]}),
+  % pick, parametrized types, aliasing and mixins tricks
+  jmeta:add({type, ?N(range),
+    [{guards, [fun(V, Params) when is_integer(V) ->
+      {Min, Max} = jframe:find([min, max], Params),
+      V >= Min andalso V =< Max
+    end]}]}),
+  true = jmeta:is({?N(range, [{min, 1}, {max, 10}]), 5}),
+  jmeta:add({type, ?N(range1_7), [{mixins, [?N(range, [{min, 1}, {max, 7}])]}]}),
+  jmeta:add({type, ?N(range4_9), [{mixins, [?N(range, [{min, 4}, {max, 9}])]}]}),
+  jmeta:add({type, ?N(mix_1_7_and_4_9), [{mixins, [?N(range1_7), ?N(range4_9)]}, {mode, {mixins, all}}]}),
+  jmeta:add({type, ?N(mix_1_7_or_4_9), [{mixins, [?N(range1_7), ?N(range4_9)]}, {mode, {mixins, any}}]}),
   Nums = lists:seq(-20, 20),
   [1, 2, 3, 4, 5, 6, 7] = jmeta:pick({?N(range1_7), Nums}),
   [4, 5, 6, 7, 8, 9] = jmeta:pick({?N(range4_9), Nums}),

@@ -26,11 +26,11 @@ null() ->
   each_is_not(null, ["null", <<"null">>, undefined, nil]).
 
 numeric() ->
-  each(numeric, [0, 1.0, -99999999999999999999.0, 20, 2.3e-40]), % 32#JMETA (thank you IntelliJ)
+  each(numeric, [0, 1.0, -99999999999999999999.0, 20, 2.3e-40, 32#JMETA]),
   each_is_not(numeric, [<<>>, {}, [], <<0>>]).
 
 integer() ->
-  each(integer, [0, 1, -20, 100000, 999999999999999999999999]), % 32#ELEPHANT
+  each(integer, [0, 1, -20, 100000, 999999999999999999999999, 32#ELEPHANT]),
   each_is_not(integer, [0.0, 1.0]).
 
 bit() ->
@@ -39,7 +39,7 @@ bit() ->
 
 float() ->
   each(float, [0.0, 1.0, -2.3e-40]),
-  each_is_not(float, [0, 1, 500]). % 32#FLOAT
+  each_is_not(float, [0, 1, 500, 32#FLOAT]).
 
 boolean() ->
   each(boolean, [true, false, 'true', 'false']),

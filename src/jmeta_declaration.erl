@@ -192,6 +192,8 @@ is_class_key({Namespace, Name, {Parameter, _}}) when is_atom(Namespace) andalso 
 is_class_key({Namespace, Name, Params}) when is_atom(Namespace) andalso is_atom(Name) andalso is_list(Params) ->
   jframe:is_frame(Params);
 is_class_key({Namespace, Name}) when is_atom(Namespace) andalso is_atom(Name) -> true;
+is_class_key({Name, {Parameter, _}}) when is_atom(Name) andalso is_atom(Parameter) -> true;
+is_class_key({Name, Params}) when is_atom(Name) andalso is_list(Params) -> true;
 is_class_key(Name) when is_atom(Name) -> true;
 is_class_key(_) -> false.
 
