@@ -17,7 +17,7 @@ $ rebar eunit
 
 #### Startup & Tricks out of the box ####
 
-```erl-sh
+```erlang
 1> jmeta:start().
 ok
 2> jmeta:is({tuple, {a, b, c}}).
@@ -47,7 +47,7 @@ Let's define a new type!
 A note: all the following examples assume that **jmeta** has been bootstrapped successfully
 (see the **Startup** section).
 
-```erl-sh
+```erlang
 1> jmeta:add({type, gender, [{guards, [fun(Gender) -> lists:member(Gender, [male, female, na]) end]}]}).
 29
 2> jmeta:is({gender, male}).
@@ -63,7 +63,7 @@ syntax on it, **jmeta** creates a new namespace once it appears.
 
 OK, let's try again.
 
-```erl-sh
+```erlang
 1> jmeta:add({type, {'thedicegame.myproject.local', d6_result}, [{guards, [fun(V) -> V >= 1 andalso V =< 6 end]}]}).
 1
 2> jmeta:is({d6_result, 3}).
@@ -86,7 +86,7 @@ Using parameters you can tweak a type directly during the validation stage.
 A note: I'm gonna use std in the following examples in order to simplify them,
 but that's definitely a wrong way to do so. In real projects you always use namespaces.
 
-```erl-sh
+```erlang
 1> jmeta:add({type, dice,
       [{guards, [fun(V, [{d, D}]) -> V >= 1 andalso V =< D end]},
        {params, [{d, 6}]}
@@ -109,7 +109,7 @@ the **jmeta_library**.
 The mixins mechanism is the way to combine types together. It's the simplest way to achieve variant types but
 also it's very useful in some other situations.
 
-```erl-sh
+```erlang
 1> jmeta:add({type, range,
       [{guards, [fun(V, Params) when is_integer(V) ->
         {Min, Max} = jframe:find([min, max], Params),
@@ -136,7 +136,7 @@ But there is also not so strict version of the all modificator - the **any** mod
 you create true variant types and achieve some other interesting effects. The any modificator assumes that
 this is enough if a given value satisfies any type of listed types of the mixins section.
 
-```erl-sh
+```erlang
 5> jmeta:add({type, range1_7_or_4_9,
      [{mixins, [
        {range, [{min, 1}, {max, 7}]},
@@ -154,7 +154,7 @@ this is enough if a given value satisfies any type of listed types of the mixins
 You can achieve the same effect by specifying a multi guards function and combining them together using
 the **any** modificator. Let's see how it works!
 
-```erl-sh
+```erlang
 1> jmeta:add({type, int_or_str2, [
     {guards, [fun erlang:is_integer/1, fun erlang:is_bitstring/1]},
     {mode, {guards, any}}]}).
@@ -181,7 +181,7 @@ First things first.
 Frame is a complex type introduced in **jmeta**. Technically it's just a key-value list.
 Let's inspect some interesting tricks you can do on frames using **jframe** module.
 
-```erl-sh
+```erlang
 1> F1 = jframe:new([{name, <<"John">>}, {age, 46}]).
 [{name, <<"John">>}, {age, 46}]
 2> F2 = jframe:store([{age, 47}, {gender, m}], F1).
@@ -242,18 +242,18 @@ setup() ->
 For those fields which are single value fields you use the **is** keyword.
 For enumerations you use the **list_of** keyword.
  
-*A node: the **list_of** keyword supports nesting, means you can define list of list of N,
+*A node: the* ***list_of*** *keyword supports nesting, means you can define list of list of N,
 and we can go deeper of course.*
 
 By default all the declared fields are mandatory. It's possible to override this behavior by using
 the **optional** modificator. It's also possible to define some **custom field guards**, but there is no modificators
 on that feature. You either apply all of the guards at once or you either use none of them.  
 
-*An important note: please inspect the **jmeta_tests.erl** module for a better understanding.*
+*An important note: please inspect the* ***jmeta_tests.erl*** *module for a better understanding.*
 
 OK, let's see how it works!
 
-```erl-sh
+```erlang
 1> jmeta:start().
 ok
 2> real_project_setup:setup().
