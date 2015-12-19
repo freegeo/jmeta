@@ -84,7 +84,7 @@ Such huge namespaces are pretty inconvenient in the use, so we can hide them out
 You can define a type with parameters. You can also specify default values.
 Using parameters you can tweak a type directly during the validation stage.
 
-*A note: I'm gonna use std in the following examples in order to simplify them,
+*A note: I'm going to use std in the following examples in order to simplify them,
 but that's definitely a wrong way to do so. In real projects you always use namespaces.*
 
 ```erlang
