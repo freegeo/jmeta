@@ -2,6 +2,8 @@
 
 Yet another data validation library (based on the duck typing approach) for **Erlang**.
 
+Pure experimental! Do not use it on production.
+
 [![Build Status](https://travis-ci.org/freegeo/jmeta.svg)](https://travis-ci.org/freegeo/jmeta)
 
 If you have any questions feel free to contact the author: said.dk@gmail.com (Kostya ^__^)
@@ -156,11 +158,11 @@ You can achieve the same effect by specifying a multi guards function and combin
 the `any` modificator. Let's see how it works!
 
 ```erlang
-1> jmeta:add({type, int_or_str2, [
+9> jmeta:add({type, int_or_str2, [
     {guards, [fun erlang:is_integer/1, fun erlang:is_bitstring/1]},
     {mode, {guards, any}}]}).
 29
-2> jmeta:pick({int_or_str2, [1, 2.44, 5, <<"Hello">>, 8, [1, 2, 3], {a, b, c}, <<"John">>]}).
+10> jmeta:pick({int_or_str2, [1, 2.44, 5, <<"Hello">>, 8, [1, 2, 3], {a, b, c}, <<"John">>]}).
 [1, 5, <<"Hello">>, 8, <<"John">>]
 ```
 
@@ -249,6 +251,24 @@ and we can go deeper of course.*
 By default all the declared fields are mandatory. It's possible to override this behavior by using
 the `optional` modificator. It's also possible to define some **custom field guards**, but there are no modificators
 on that feature. You either apply all of the guards at once or you either use none of them.
+
+As you can see **jmeta** provides some inheritance abilities for complex types (the `extend` keyword). In the above
+example we could have applied the `entity` frame to the `person` frame. But we decided to apply both of them
+directly to the `student` frame since **jmeta** supports a multiple inheritance as well. The engine folds the
+`extend` list from left to right. Each iteration produces a new extended frame using the following rule:
+
+1. Recursively extend the left frame.
+2. Recursively extend the right frame.
+3. Merge the left and right frames, use the fields of the right frame in case of conflicts.
+
+At the end you have 2 field sets. The first one is an extended set (all the fields of the `extend` section).
+The second one is a set of fields of a given frame. To produce the destination frame the engine takes
+both sets and merges them using the case 3 of the above rule.
+
+Two things you have to remember:
+
+1. Right frames of the `extend` section have higher priority.
+2. You can override fields simply by giving the same field name in descendants.
 
 *An important note: please inspect the* `jmeta_tests.erl` *module for a better understanding.*
 
